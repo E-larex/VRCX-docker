@@ -61,9 +61,12 @@ impl DesktopVrOverlayRuntime {
         {
             let config = services.config().clone();
             let runtime = Arc::new(VrOverlayRuntime::new(Arc::clone(&services)));
-            let enabled = config.get_bool(VR_OVERLAY_ENABLED_CONFIG_KEY, false)?;
+            let enabled = !cfg!(feature = "web-host")
+                && config.get_bool(VR_OVERLAY_ENABLED_CONFIG_KEY, false)?;
             runtime.set_enabled(enabled);
-            runtime.start_refresh_loop(services.tasks().clone());
+            if !cfg!(feature = "web-host") {
+                runtime.start_refresh_loop(services.tasks().clone());
+            }
             services
                 .set_overlay_activity_extra_sink(Arc::new(VrOverlayActivitySink::new(&runtime)));
             Ok(Self { config, runtime })

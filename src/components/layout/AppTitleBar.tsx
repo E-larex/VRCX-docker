@@ -138,38 +138,54 @@ export function AppTitleBar() {
                 ) : (
                     actions
                 )}
-                <div className="flex h-full shrink-0 items-center">
-                    <TitleBarWindowButton
-                        label={t('app_menu.label.minimize_window')}
-                        onAction={() => {
-                            runWindowAction(minimizeWindow);
+                {import.meta.env.MODE === 'web' ? (
+                    <button
+                        type="button"
+                        className="hover:bg-accent h-full shrink-0 px-3 text-xs"
+                        onClick={() => {
+                            void import('@/platform/web/http').then(
+                                ({ logoutWebsite }) => logoutWebsite()
+                            );
                         }}
                     >
-                        <MinusIcon data-icon="inline-start" />
-                    </TitleBarWindowButton>
-                    {sidebarWindowMode ? null : (
+                        {navigator.language.startsWith('zh')
+                            ? '退出网页'
+                            : 'Sign out of website'}
+                    </button>
+                ) : (
+                    <div className="flex h-full shrink-0 items-center">
                         <TitleBarWindowButton
-                            label={maximizeLabel}
+                            label={t('app_menu.label.minimize_window')}
                             onAction={() => {
-                                runWindowAction(toggleMaximizeWindow);
+                                runWindowAction(minimizeWindow);
                             }}
                         >
-                            <MaximizeIcon
-                                data-icon="inline-start"
-                                className="size-3"
-                            />
+                            <MinusIcon data-icon="inline-start" />
                         </TitleBarWindowButton>
-                    )}
-                    <TitleBarWindowButton
-                        label={t('app_menu.action.close_window')}
-                        className="hover:bg-destructive! hover:text-destructive-foreground!"
-                        onAction={() => {
-                            runWindowAction(closeWindow);
-                        }}
-                    >
-                        <XIcon data-icon="inline-start" />
-                    </TitleBarWindowButton>
-                </div>
+                        {sidebarWindowMode ? null : (
+                            <TitleBarWindowButton
+                                label={maximizeLabel}
+                                onAction={() => {
+                                    runWindowAction(toggleMaximizeWindow);
+                                }}
+                            >
+                                <MaximizeIcon
+                                    data-icon="inline-start"
+                                    className="size-3"
+                                />
+                            </TitleBarWindowButton>
+                        )}
+                        <TitleBarWindowButton
+                            label={t('app_menu.action.close_window')}
+                            className="hover:bg-destructive! hover:text-destructive-foreground!"
+                            onAction={() => {
+                                runWindowAction(closeWindow);
+                            }}
+                        >
+                            <XIcon data-icon="inline-start" />
+                        </TitleBarWindowButton>
+                    </div>
+                )}
             </header>
         </>
     );

@@ -1,0 +1,38 @@
+FROM node:26-bookworm-slim AS frontend
+WORKDIR /src
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY . .
+RUN npm exec vite -- build --mode web
+
+FROM rust:1.97-bookworm AS backend
+RUN apt-get update && apt-get install -y --no-install-recommends libfontconfig1-dev cmake clang && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY Cargo.toml Cargo.lock ./
+COPY .cargo .cargo
+COPY crates crates
+COPY src-tauri src-tauri
+COPY src/localization src/localization
+RUN cargo build --release --locked -p vrcx-0-web
+COPY scripts/generate-third-party-licenses.ts scripts/generate-third-party-licenses.ts
+COPY package-lock.json ./
+COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
+COPY --from=frontend /src/node_modules/@fontsource-variable /src/node_modules/@fontsource-variable
+COPY --from=frontend /src/dist /src/dist
+RUN node scripts/generate-third-party-licenses.ts --web
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libfontconfig1 fonts-dejavu-core curl tzdata && rm -rf /var/lib/apt/lists/* \
+    && useradd --uid 10001 --create-home vrcx \
+    && ln -sf /data/.machine-id /etc/machine-id \
+    && mkdir /data && chown vrcx:vrcx /data
+COPY --from=backend /src/target/release/vrcx-0-web /usr/local/bin/vrcx-0-web
+COPY --from=backend /src/dist /app/dist
+COPY LICENSE NOTICE /usr/share/licenses/vrcx-0/
+ENV VRCX_WEB_DIST=/app/dist VRCX_WEB_BIND=0.0.0.0:8080 VRCX_LEGACY_DATA_DIR=/data/legacy
+USER vrcx
+VOLUME /data
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD curl --fail --silent http://127.0.0.1:8080/health || exit 1
+ENTRYPOINT ["vrcx-0-web"]
+CMD ["--data-dir", "/data"]

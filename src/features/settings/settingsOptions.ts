@@ -155,7 +155,7 @@ export const settingsTabs = [
     ['integrations', 'view.settings.category.integrations'],
     ['advanced', 'view.settings.category.advanced'],
     ['feedback', 'view.settings.category.feedback']
-];
+].filter(([tab]) => import.meta.env.MODE !== 'web' || tab !== 'vr');
 
 export function resolveActiveSettingsTab(
     requestedTab: string,

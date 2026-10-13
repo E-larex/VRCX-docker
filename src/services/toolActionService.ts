@@ -80,6 +80,11 @@ export function isToolCapabilityAvailable(
     tool?: ToolDefinition | null,
     hostCapabilities?: HostCapabilities
 ): boolean {
+    if (
+        import.meta.env.MODE === 'web' &&
+        ['vrcx-data', 'app-launcher'].includes(tool?.key ?? '')
+    )
+        return false;
     const capabilities = [
         ...(tool?.requiredCapabilities ?? []),
         ...(tool?.requiredCapability ? [tool.requiredCapability] : [])

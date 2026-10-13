@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ProxySettingsEditor } from '@/components/proxy/ProxySettingsEditor';
 import { cn } from '@/lib/utils';
+import { isWebHost } from '@/platform/host';
 import {
     dataDirMigrationErrorKey,
     dataDirMigrationPhaseKey
@@ -321,31 +322,33 @@ export const StatusBarFooter = forwardRef<HTMLElement, StatusBarFooterProps>(
         const sessionActions = (
             <>
                 <DoNotDisturbMenu />
-                <DesktopWidgetToggle />
-                <Tooltip>
-                    <TooltipTrigger
-                        render={
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                aria-label={t(
-                                    'status_bar.start_background_mode'
-                                )}
-                                className={cn(
-                                    'size-6 shrink-0 rounded-none',
-                                    STATUS_BAR_TOGGLE_IDLE
-                                )}
-                                onClick={onStartBackgroundMode}
-                            >
-                                <Minimize2Icon data-icon="icon" />
-                            </Button>
-                        }
-                    />
-                    <TooltipContent>
-                        {t('status_bar.start_background_mode_tooltip')}
-                    </TooltipContent>
-                </Tooltip>
+                {!isWebHost && <DesktopWidgetToggle />}
+                {!isWebHost && (
+                    <Tooltip>
+                        <TooltipTrigger
+                            render={
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label={t(
+                                        'status_bar.start_background_mode'
+                                    )}
+                                    className={cn(
+                                        'size-6 shrink-0 rounded-none',
+                                        STATUS_BAR_TOGGLE_IDLE
+                                    )}
+                                    onClick={onStartBackgroundMode}
+                                >
+                                    <Minimize2Icon data-icon="icon" />
+                                </Button>
+                            }
+                        />
+                        <TooltipContent>
+                            {t('status_bar.start_background_mode_tooltip')}
+                        </TooltipContent>
+                    </Tooltip>
+                )}
             </>
         );
 

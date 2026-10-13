@@ -1,0 +1,46 @@
+services:
+    init-data:
+        image: vrcx-0-web:2.32.0
+        pull_policy: never
+        user: '0:0'
+        entrypoint: ['/bin/sh', '-ec']
+        command:
+            - |
+                if [ ! -s /data/.machine-id ]; then
+                    umask 077
+                    tr -d '-' < /proc/sys/kernel/random/uuid > /data/.machine-id
+                fi
+                chown 10001:10001 /data /data/.machine-id
+        volumes:
+            - ./data:/data
+        cap_drop:
+            - ALL
+        cap_add:
+            - CHOWN
+            - DAC_OVERRIDE
+        security_opt:
+            - no-new-privileges:true
+    web:
+        build:
+            context: .
+            dockerfile: Dockerfile.web
+        image: vrcx-0-web:2.32.0
+        restart: unless-stopped
+        init: true
+        stop_grace_period: 45s
+        depends_on:
+            init-data:
+                condition: service_completed_successfully
+        ports:
+            - '${VRCX_WEB_LISTEN:-127.0.0.1}:${VRCX_WEB_PORT:-8080}:8080'
+        environment:
+            VRCX_WEB_ORIGIN: ${VRCX_WEB_ORIGIN:-}
+            VRCX_WEB_LAN_MODE: ${VRCX_WEB_LAN_MODE:-0}
+            VRCX_WEB_PASSWORD: ${VRCX_WEB_PASSWORD:?Set the website administrator password}
+            TZ: ${TZ:-Asia/Shanghai}
+        volumes:
+            - ./data:/data
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL

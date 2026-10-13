@@ -2,6 +2,7 @@ import { ChevronDownIcon } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
 
 import { cn } from '@/lib/utils';
+import { isSettingsCardAvailable } from '@/platform/host';
 import { useNavigationCacheStore } from '@/state/navigationCacheStore';
 import { Card, CardContent, CardHeader } from '@/ui/shadcn/card';
 import {
@@ -40,6 +41,7 @@ export function SettingsCard({
         (state) => state.setSettingsCardOpen
     );
 
+    if (!isSettingsCardAvailable(cardId)) return null;
     return (
         <Collapsible
             render={<section />}

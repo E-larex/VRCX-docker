@@ -278,21 +278,22 @@ export function useTitleBarActions(
         });
     }, [alwaysOnTop]);
 
-    const alwaysOnTopButton = alwaysOnTopSupported ? (
-        <TitleBarButton
-            label={t('app_menu.always_on_top')}
-            aria-pressed={alwaysOnTop}
-            className={cn(
-                'size-7 min-w-7 rounded-md px-0',
-                alwaysOnTop && STATUS_BAR_TOGGLE_ACTIVE
-            )}
-            onClick={toggleAlwaysOnTop}
-        >
-            <PinIcon data-icon="icon" />
-        </TitleBarButton>
-    ) : null;
+    const alwaysOnTopButton =
+        import.meta.env.MODE !== 'web' && alwaysOnTopSupported ? (
+            <TitleBarButton
+                label={t('app_menu.always_on_top')}
+                aria-pressed={alwaysOnTop}
+                className={cn(
+                    'size-7 min-w-7 rounded-md px-0',
+                    alwaysOnTop && STATUS_BAR_TOGGLE_ACTIVE
+                )}
+                onClick={toggleAlwaysOnTop}
+            >
+                <PinIcon data-icon="icon" />
+            </TitleBarButton>
+        ) : null;
 
-    const sidebarWindowModeButton = (
+    const sidebarWindowModeButton = import.meta.env.MODE !== 'web' && (
         <TitleBarButton
             label={sidebarWindowModeLabel}
             aria-pressed={sidebarWindowMode}

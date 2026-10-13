@@ -386,6 +386,7 @@ function writeLoggerNotices(outputPath: string): void {
 }
 
 function main(): void {
+    const webHost = process.argv.includes('--web');
     const loggerFlag = process.argv.indexOf('--logger');
     if (loggerFlag >= 0) {
         const outputPath = process.argv[loggerFlag + 1];
@@ -403,11 +404,17 @@ function main(): void {
         .map(normalizeFrontendEntry)
         .sort((left, right) => left.name.localeCompare(right.name));
     const bundledFontEntries = readBundledFontEntries(frontendEntries);
-    const rustEntries = readRustEntries();
+    const webMetadata = webHost ? readCargoMetadata() : undefined;
+    const backendEntries = webMetadata
+        ? rustEntries(
+              webMetadata,
+              cargoDependencyClosure(webMetadata, 'vrcx-0-web')
+          )
+        : readRustEntries();
     const entries = [
         ...frontendEntries,
         ...bundledFontEntries,
-        ...rustEntries
+        ...backendEntries
     ].sort((left, right) => left.name.localeCompare(right.name));
     const manifest = {
         generatedAt: new Date().toISOString(),
@@ -417,7 +424,9 @@ function main(): void {
 
     fs.writeFileSync(outputManifestPath, JSON.stringify(manifest, null, 4));
     fs.writeFileSync(
-        tauriResourceNoticePath,
+        webHost
+            ? path.join(outputDir, 'THIRD_PARTY_NOTICES.txt')
+            : tauriResourceNoticePath,
         createThirdPartyNoticeText(entries)
     );
     removeIntermediateFrontendManifest();

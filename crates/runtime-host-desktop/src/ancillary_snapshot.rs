@@ -59,7 +59,11 @@ pub async fn ancillary_runtime_snapshot(
         mutual_graph_fetch_status: state.mutual_graph_fetch_status(),
         app_update_status: state.app_update_hydration_snapshot(),
         app_update_download_status: state.app_update_download_status(),
-        game_client_debug_logging_status: state.game_client_debug_logging_status(),
+        game_client_debug_logging_status: if cfg!(feature = "web-host") {
+            None
+        } else {
+            state.game_client_debug_logging_status()
+        },
         game_process_snapshot,
         now_playing: state.now_playing_snapshot(),
         background_image_state: state.background_image_projection(),

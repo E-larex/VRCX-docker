@@ -94,7 +94,7 @@ function SettingsPageContent() {
                     <SettingsInterfaceTab />
                     <SettingsSocialTab />
                     <SettingsNotificationsTab />
-                    <SettingsVrTab />
+                    {import.meta.env.MODE !== 'web' && <SettingsVrTab />}
                     <SettingsMediaTab />
                     <SettingsAiTab active={shell.activeSettingsTab === 'ai'} />
                     <SettingsIntegrationsTab />

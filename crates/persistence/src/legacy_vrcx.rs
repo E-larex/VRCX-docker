@@ -90,6 +90,10 @@ fn discover_legacy_source() -> Result<Option<LegacyVrcxSource>, String> {
 
 fn legacy_vrcx_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
+    // Optional explicit import source for container/browser hosts.
+    if let Some(path) = std::env::var_os("VRCX_LEGACY_DATA_DIR") {
+        dirs.push(PathBuf::from(path));
+    }
 
     #[cfg(target_os = "windows")]
     {

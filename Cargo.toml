@@ -23,6 +23,7 @@ members = [
     "crates/runtime-host-desktop",
     "crates/overlay-runtime",
     "crates/headless",
+    "crates/web-server",
     "crates/logger-protocol",
     "crates/logger",
     "crates/mcp",

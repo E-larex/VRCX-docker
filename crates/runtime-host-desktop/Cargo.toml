@@ -7,6 +7,7 @@ description = "Desktop runtime composition"
 
 [features]
 default = []
+web-host = []
 steamvr-overlay = ["vrcx-0-overlay-runtime/steamvr-overlay"]
 openxr-overlay = ["vrcx-0-overlay-runtime/openxr-overlay"]
 test-utils = [

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router';
 import { AboutVrcxDialog } from '@/components/about/AboutDialog';
 import { OpenSourceNoticeDialog } from '@/components/hosts/system-dialogs/OpenSourceNoticeDialog';
 import { cn } from '@/lib/utils';
+import { isWebHost } from '@/platform/host';
 import { commands } from '@/platform/tauri/bindings';
 import { logoutFromReactShell } from '@/services/authExecutionService';
 import { startBackgroundModeForCurrentSession } from '@/services/backgroundModeService';
@@ -146,13 +147,15 @@ export function AppMenuBar({ showHelp = true }: { showHelp?: boolean }) {
                             >
                                 {t('app_menu.settings')}
                             </MenuItem>
-                            <MenuItem
-                                onClick={() =>
-                                    setSystemHostOpen('updaterOpen', true)
-                                }
-                            >
-                                {t('app_menu.check_updates')}
-                            </MenuItem>
+                            {!isWebHost && (
+                                <MenuItem
+                                    onClick={() =>
+                                        setSystemHostOpen('updaterOpen', true)
+                                    }
+                                >
+                                    {t('app_menu.check_updates')}
+                                </MenuItem>
+                            )}
                             <MenuItem
                                 onClick={() => {
                                     runRestartApplication();
@@ -160,13 +163,15 @@ export function AppMenuBar({ showHelp = true }: { showHelp?: boolean }) {
                             >
                                 {t('app_menu.restart')}
                             </MenuItem>
-                            <MenuItem
-                                onClick={() => {
-                                    runStartBackgroundMode();
-                                }}
-                            >
-                                {t('app_menu.start_background_mode')}
-                            </MenuItem>
+                            {!isWebHost && (
+                                <MenuItem
+                                    onClick={() => {
+                                        runStartBackgroundMode();
+                                    }}
+                                >
+                                    {t('app_menu.start_background_mode')}
+                                </MenuItem>
+                            )}
                         </MenubarGroup>
                         <MenubarSeparator />
                         <MenubarGroup>

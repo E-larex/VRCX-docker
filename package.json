@@ -19,6 +19,8 @@
         "generate:tauri-bindings": "cargo run --manifest-path src-tauri/Cargo.toml --features bindings-export --bin export-bindings && oxfmt src/platform/tauri/bindings.ts",
         "prepare": "husky",
         "dev": "vite",
+        "dev:web": "vite --mode web",
+        "build:web": "vite build --mode web && npm run build:licenses -- --web",
         "tauri": "tauri",
         "tauri:dev": "tauri dev --features devtools",
         "tauri:dev:react-devtools": "set VITE_REACT_DEVTOOLS=1&& tauri dev --features devtools",

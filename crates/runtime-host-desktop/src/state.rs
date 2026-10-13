@@ -2383,7 +2383,9 @@ impl RegistryBackupRuntime {
 impl RuntimeHostProfileExtension for DesktopRuntimeProfileExtension {
     fn start_profile_services(&self, state: &RuntimeHostState) {
         self.start_desktop_services(state);
-        self.start_game_services(state);
+        if !cfg!(feature = "web-host") {
+            self.start_game_services(state);
+        }
     }
 
     fn stop_profile_services(&self) {
@@ -2399,7 +2401,9 @@ impl RuntimeHostProfileExtension for DesktopRuntimeProfileExtension {
     }
 
     fn start_profile_maintenance(&self, state: &RuntimeHostState) {
-        self.start_registry_backup_loop(state);
+        if !cfg!(feature = "web-host") {
+            self.start_registry_backup_loop(state);
+        }
         self.start_desktop_maintenance_loops(state);
         self.desktop.feed_logger.start_presence_loop(state);
     }
@@ -2440,6 +2444,9 @@ impl DesktopRuntimeProfileExtension {
     }
 
     fn start_game_services(&self, state: &RuntimeHostState) {
+        if cfg!(feature = "web-host") {
+            return;
+        }
         let capabilities = current_host_capabilities();
         tracing::info!(platform = %capabilities.platform, "host capabilities resolved");
         self.start_log_watcher_for_current_platform(state, &capabilities);
@@ -2847,7 +2854,7 @@ impl DesktopRuntimeProfileExtension {
                         background_jobs: &background_jobs,
                     };
                     let run_presence = now >= next_presence;
-                    let run_discord = now >= next_discord;
+                    let run_discord = !cfg!(feature = "web-host") && now >= next_discord;
                     if run_presence || run_discord {
                         let favorite_group_memberships = authenticated_runtime
                             .favorite_group_memberships()

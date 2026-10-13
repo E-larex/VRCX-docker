@@ -67,6 +67,7 @@ function createReactDevtoolsStandalonePlugin(enabled: boolean): Plugin {
 }
 
 export default defineConfig(({ mode }) => {
+    const webHost = mode === 'web';
     const tauriConf = JSON.parse(
         fs.readFileSync(
             new URL('./src-tauri/tauri.conf.json', import.meta.url),
@@ -82,12 +83,51 @@ export default defineConfig(({ mode }) => {
     return {
         base: '',
         plugins: [
+            ...(webHost
+                ? [
+                      {
+                          name: 'vrcx-web-entry',
+                          transformIndexHtml: {
+                              order: 'pre' as const,
+                              handler: (html: string) =>
+                                  html.replace(
+                                      '/src/main.js',
+                                      '/src/web-main.tsx'
+                                  )
+                          }
+                      }
+                  ]
+                : []),
             createReactDevtoolsStandalonePlugin(enableReactDevtoolsStandalone),
             react(),
             tailwindcss()
         ],
         resolve: {
             alias: {
+                ...(webHost
+                    ? {
+                          '@tauri-apps/api/core': resolve(
+                              import.meta.dirname,
+                              'src/platform/web/core.ts'
+                          ),
+                          '@tauri-apps/api/event': resolve(
+                              import.meta.dirname,
+                              'src/platform/web/events.ts'
+                          ),
+                          '@tauri-apps/api/window': resolve(
+                              import.meta.dirname,
+                              'src/platform/web/window.ts'
+                          ),
+                          '@tauri-apps/api/webviewWindow': resolve(
+                              import.meta.dirname,
+                              'src/platform/web/window.ts'
+                          ),
+                          '@tauri-apps/plugin-fs': resolve(
+                              import.meta.dirname,
+                              'src/platform/web/cache.ts'
+                          )
+                      }
+                    : {}),
                 '@': resolve(import.meta.dirname, 'src')
             }
         },
@@ -108,7 +148,7 @@ export default defineConfig(({ mode }) => {
                 process.env['VRCX_0_BUILD_BADGE'] || ''
             ),
             VRCX_0_DISABLE_UPDATE_CHECK: JSON.stringify(
-                process.env['VRCX_0_DISABLE_UPDATE_CHECK'] === '1'
+                webHost || process.env['VRCX_0_DISABLE_UPDATE_CHECK'] === '1'
             ),
             VRCX_0_MACOS_SYSTEM_FONTS_ENABLED: JSON.stringify(
                 macosSystemFontsEnabled
@@ -117,6 +157,14 @@ export default defineConfig(({ mode }) => {
         server: {
             port: 9000,
             strictPort: true,
+            ...(webHost
+                ? {
+                      proxy: {
+                          '/api': 'http://127.0.0.1:8080',
+                          '/health': 'http://127.0.0.1:8080'
+                      }
+                  }
+                : {}),
             watch: {
                 ignored: [
                     '**/.github/**',

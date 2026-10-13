@@ -1,0 +1,52 @@
+[package]
+name = "vrcx-0-web"
+version = "2.32.0"
+edition = "2021"
+license.workspace = true
+description = "Browser host for the shared VRCX-0 application"
+
+[dependencies]
+axum = { version = "0.8", features = ["multipart"] }
+async-trait.workspace = true
+base64.workspace = true
+chrono.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+specta.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rustls = { version = "0.23", features = ["aws_lc_rs"] }
+tower-http = { version = "0.6", features = ["fs", "limit"] }
+sha2.workspace = true
+argon2 = "0.6"
+url.workspace = true
+vrcx-0-core = { path = "../core" }
+vrcx-0-platform = { path = "../platform" }
+vrcx-0-host-desktop = { path = "../host-desktop" }
+vrcx-0-i18n = { path = "../i18n" }
+vrcx-0-application = { path = "../application" }
+vrcx-0-contracts = { path = "../contracts" }
+vrcx-0-application-activity = { path = "../application-activity" }
+vrcx-0-application-core = { path = "../application-core" }
+vrcx-0-application-realtime = { path = "../application-realtime" }
+vrcx-0-logger-protocol = { path = "../logger-protocol", features = ["specta"] }
+vrcx-0-application-game = { path = "../application-game" }
+vrcx-0-mcp = { path = "../mcp" }
+vrcx-0-integration-api = { path = "../integration-api" }
+vrcx-0-assistant = { path = "../assistant" }
+vrcx-0-composition = { path = "../composition" }
+vrcx-0-runtime-host-desktop = { path = "../runtime-host-desktop", features = ["web-host"] }
+vrcx-0-local-server = { path = "../local-server" }
+
+[build-dependencies]
+syn = { version = "2", features = ["full", "visit-mut"] }
+quote = "1"
+proc-macro2 = "1"
+heck = "0.5"
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
