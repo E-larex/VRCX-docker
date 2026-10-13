@@ -1,135 +1,72 @@
-<div align="center">
-
-# <img src="images/VRCX-0.png" alt="VRCX-0 Logo" width="25"> VRCX-0
-
-### VRCX, plus léger et plus rapide.
+# VRCX-0 Web
 
 [English](README.md) | Français | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-Hant.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
 
-[![Version](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/version.json&style=flat&color=4340a2&labelColor=1f2328&logo=github&logoColor=white)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Téléchargements](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/downloads.json&style=flat&color=4340a2&labelColor=1f2328)](https://github.com/Map1en/VRCX-0)
-[![Installer](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/windows-installer-size.json&style=flat&label=installer&color=4340a2&labelColor=1f2328&logo=github&logoColor=white)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Discord](https://img.shields.io/discord/1494343220467994644?style=flat&logo=discord&logoColor=white&label=discord&color=5865f2&labelColor=1f2328)](https://discord.gg/fehKP3SVPN)
-<br>
-[![CI](https://img.shields.io/github/actions/workflow/status/Map1en/VRCX-0/ci.yml?branch=master&label=CI&style=flat&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/coverage.json&style=flat&color=brightgreen&labelColor=1f2328)](https://github.com/Map1en/VRCX-0)
-[![License](https://img.shields.io/badge/license-GPL--3.0-4c566a?style=flat&labelColor=1f2328)](LICENSE)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0?ref=badge_shield)
+**Une version Web Docker basée sur [VRCX-0](https://github.com/Map1en/VRCX-0), dont le développement est piloté par ChatGPT.**
 
-[![Télécharger](https://img.shields.io/badge/Download%20VRCX--0-4340a2?style=for-the-badge)](https://github.com/Map1en/VRCX-0/releases/latest)
+Ce fork part de la version originale **v2.32.0** et réutilise autant que possible la logique Rust, les bases de données et l’interface React. Les modifications restent limitées pour faciliter l’intégration des évolutions du projet d’origine. La branche de développement est `feat/web-headless` ; il s’agit d’une première version fonctionnelle.
 
-Windows · macOS · Linux
+Le service fonctionne sur un serveur Linux sans bureau ni écran, accessible depuis un navigateur. Il est destiné à un seul utilisateur : un compte VRChat actif, avec les mêmes réglages et données partagés entre plusieurs navigateurs. ChatGPT intervient dans le développement ; aucun compte ChatGPT n’est nécessaire pour le fonctionnement de base. Les fonctions d’IA facultatives nécessitent leur propre fournisseur.
 
-![VRCX-0](images/screenshot-user-dialog.webp)
+## Démarrage avec Docker Compose
 
-</div>
+Prérequis : Linux, Docker et le plugin Docker Compose. Dans le dossier du dépôt, exécutez `cp .env.example .env`, puis modifiez `.env` avec votre domaine réel et un mot de passe Web distinct d’au moins 12 caractères :
 
-VRCX-0 est une réécriture de VRCX sur une base native Rust (Tauri + React) par
-l'un de ses anciens mainteneurs, permettant de meilleures performances : Des
-années de données maintenues, ainsi qu'une utilisation mémoire et taille
-d'installation bien plus petites que l'originel.
-
-Au premier lancement, vos données et paramètres VRCX sont automatiquement
-transférés. Les données originelles ne sont pas modifiées — vous pouvez
-réutiliser VRCX à tout moment.
-
-VRCX est une version stable tandis que VRCX-0 est l'endroit où les
-nouvelles fonctionnalités sont créées.
-
-## Installation
-
-Récupérez la
-[dernière version](https://github.com/Map1en/VRCX-0/releases/latest) pour
-votre plateforme :
-
-| Platforme             | Fichier                                     |
-| --------------------- | ------------------------------------------- |
-| Windows               | `VRCX-0_<version>_windows_x86_64_setup.exe` |
-| macOS (Apple Silicon) | `VRCX-0_<version>_macos_aarch64.dmg`        |
-| macOS (Intel)         | `VRCX-0_<version>_macos_x86_64.dmg`         |
-| Linux                 | `.AppImage`, `.deb`, or `.rpm`              |
-
-L'installation est unique — VRCX-0 se mettra à jour automatiquement.
-
-## L'important
-
-- **Des années de données ne le ralentiront pas** — Les données qui
-  ralentissaient VRCX n'affectent pas VRCX-0. Celui-ci fonctionne tout aussi
-  bien sur un PC bas de gamme que sur un serveur personnel.
-- **Utilisation mémoire 50% à 70% inférieure à VRCX** lors d'une utilisation
-  normale
-- le **mode arrière-plan** réduit l'utilisation mémoire à une dizaine de Mo
-  tout en maintenant les fonctionnalités essentielles.
-- **Plus petit qu'un bundle d'avatar** — Seulement 10 Mo à installer. Prend un
-  peu plus de 30 Mo sur le disque et est environ 10 fois plus petit que VRCX
-- **Zero problème de migration** — Votre base de données et paramètres VRCX
-  sont importés automatiquement ; les données originelles ne sont pas
-  modifiées
-
-De plus :
-
-- **IA Sociale** — Un assistant qui vous conseille sur vos relations VRChat :
-  Demandez avec qui vous jouez le plus, de qui vous éloignez-vous ou bien
-  l'heure idéalle pour jouer avec vos amis. Connectez votre propre IA pour
-  commencer.
-- **Serveur MCP** — Laissez un outil IA accéder à vos données sociales, bien
-  plus flexible que l'assistant fourni ; recommandé pour les utilisateurs
-  expérimentés
-- **Historique local par compte** — les journaux de jeu et l'historique propre
-  à chaque compte sont stockés séparément ; ainsi, lorsque vous utilisez
-  plusieurs comptes, vos activités ne sont plus regroupées dans un seul fil
-  d'actualité.
-- **Sauvegarde et restauration** — Sauvegarde compressée en un clic de votre base de données, avec des sauvegardes automatiques programmées et plusieurs versions ; restaurer grâce à n'importe quelle sauvegarde
-- **Collection de monde partageable** — Transformez vos mondes préférés en une
-  page partageable que d'autres peuvent parcourir, ouvrir ou importer ; permet
-  également de partager des liens vers des mondes et des avatars individuels
-- **Social Automation** — Modifiez automatiquement votre statut et votre
-  biographie en fonction de l'heure, du type d'instance ou de la personne avec
-  laquelle vous êtes ; acceptez automatiquement les demandes d'invitation ;
-  rétablissez votre état précédent lorsque les règles expirent
-- **Overlay VR de poignée** — Prend en charge OpenVR (SteamVR) et
-  **OpenXR sur Linux (testé avec WiVRn)**
-- **Thèmes communautaires** — Parcourez et installez des thèmes à partir d'un
-  catalogue, définissez une image d'arrière-plan personnalisée et superposez
-  votre propre feuille de style CSS
-- **Notifications** — Bureau, synthèse vocale, overlay VR et de poignet, ainsi que webhooks : cinq
-  canaux configurables indépendamment selon le type d'événement ; les webhooks
-  utilisent un format compatible avec Discord
-- Compatible avec la navigation par clavier
-- Intégration par API pour des applications tierces — données d'instances en temps réel en jeu.
-- Mode "sans tête" pour les configurations avancées — voir `crates/headless`
-
-## Licence
-
-VRCX-0 est sous Licence publique générale GNU v3.0 (GPLv3).
-
-[![Statut FOSSA](https://app.fossa.com/api/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0?ref=badge_large)
-
-## Contribuer
-
-Suivez ces étapes pour contribuer ou créer VRCX-0 localement. Veuillez lire
-[CONTRIBUTING.md](CONTRIBUTING.md) avant de contribuer.
-
-Configuration requise : Node.js ≥ 24.10, npm ≥ 11.5 et une chaîne d'outils
-Rust stable via rustup.
-Sur Windows, installez **Visual Studio** avec la charge de travail
-**Développement Desktop en C++**
-
-```bash
-git clone https://github.com/Map1en/VRCX-0
-cd VRCX-0
-
-npm install
+```dotenv
+VRCX_WEB_ORIGIN=https://vrcx.example.com
+VRCX_WEB_PASSWORD=replace-with-your-own-strong-password
+VRCX_WEB_LAN_MODE=0
+VRCX_WEB_LISTEN=127.0.0.1
+VRCX_WEB_PORT=8080
+TZ=Asia/Shanghai
 ```
 
-Démarrer un serveur test :
+Construisez et démarrez le service :
 
-```bash
-npm run tauri:dev
+```sh
+docker compose up -d --build
+docker compose logs -f web
 ```
 
-Build pour une release (Ignore la connexion et l'installateur) :
+Par défaut, le service écoute sur `127.0.0.1:8080`. `VRCX_WEB_ORIGIN` doit correspondre exactement au protocole, à l’hôte et au port de l’adresse du navigateur, sans sous-chemin. Ajoutez [la configuration Nginx](deploy/nginx.web.conf) au bloc HTTPS `server` de votre domaine. Nginx gère le certificat et la redirection HTTPS ; l’application utilise HTTP. Désactivez la mise en tampon du proxy pour le flux SSE. Si Nginx fonctionne aussi dans un conteneur, utilisez un réseau Docker commun et la cible `web:8080`.
 
-```bash
-npm run tauri:build -- --no-sign --no-bundle
+Connectez-vous d’abord au site, puis à VRChat dans l’interface d’origine, avec l’authentification à deux facteurs si nécessaire. Le mot de passe du site est indépendant de celui de VRChat.
+
+## Accès HTTP sur le réseau local
+
+Ce mode ne nécessite ni domaine, ni certificat, ni Nginx. Conservez le mot de passe Web et modifiez `.env` :
+
+```dotenv
+VRCX_WEB_LAN_MODE=1
+VRCX_WEB_LISTEN=0.0.0.0
+VRCX_WEB_PORT=8080
 ```
+
+Exécutez `docker compose up -d --build`, puis ouvrez `http://192.168.1.10:8080` en remplaçant l’adresse IP par celle du serveur. Ce mode ignore `VRCX_WEB_ORIGIN` et vérifie la correspondance entre Origin et Host. Il accepte les IPv4 privées, IPv6 ULA, adresses locales au lien et de bouclage, ainsi que `localhost`. Les noms de domaine ordinaires utilisent le mode à origine fixe. Le navigateur peut limiter le presse-papiers en HTTP. Pour revenir à HTTPS, réglez le mode LAN sur `0` et restaurez l’adresse d’écoute et votre origine HTTPS.
+
+## Fonctions et fonctionnement en arrière-plan
+
+- Réutilisation de l’interface, des statuts des amis, de l’historique social, des favoris, mondes, avatars, groupes, invitations, notifications, notes, étiquettes et statistiques.
+- Conservation des Webhooks, de l’intégration du logger distant, de la traduction et des fournisseurs d’IA facultatifs. Les services tiers nécessitent leur propre configuration. Les Webhooks sont envoyés par le serveur.
+- La collecte continue après la fermeture du navigateur ou la déconnexion du site. Une déconnexion explicite de VRChat termine la session VRChat.
+- Désactivation de la surveillance du jeu local, des journaux du jeu, des captures d’écran et du VR Overlay. Les commandes de bureau, dont la zone de notification, les fenêtres, le démarrage automatique, les notifications de bureau et Discord RPC, sont masquées.
+- Aucun nouveau mécanisme de suppression des historiques selon leur âge. Les paramètres existants de maintenance et de conservation des sauvegardes restent applicables.
+- Actualisation habituelle des amis/favoris toutes les heures et de l’utilisateur courant toutes les 5 minutes. L’analyse des biographies est désactivée par défaut ; une fois activée, elle traite un candidat toutes les 3 secondes, avec au moins 12 heures entre deux analyses du même utilisateur, sous réserve de la planification et des limites d’origine.
+
+## Données, sauvegardes et mises à jour
+
+Les bases de données, sessions, réglages, caches et sauvegardes sont conservés dans **`./data`**, même après reconstruction du conteneur. L’arrêt de `init-data` après son exécution réussie est normal. Le service utilise l’UID/GID `10001:10001`. Incluez impérativement `./data/.machine-id` dans toute sauvegarde ou migration du dossier complet. Ne partagez pas un même dossier entre plusieurs instances en cours d’exécution.
+
+Les sélecteurs de fichiers sont remplacés par les transferts du navigateur, limités à 256 MiB par requête d’envoi. Les copies des exports manuels se trouvent dans `./data/web-files`, les données de migration VRCX dans `./data/legacy`. L’interface de restauration accepte les fichiers `.vrcx0backup`.
+
+Pour une sauvegarde complète, exécutez `docker compose stop web`, copiez tout `./data`, fichiers cachés compris, puis exécutez `docker compose start web`. Restaurez avec le propriétaire `10001:10001`. Les sauvegardes contiennent les sessions des comptes.
+
+Après mise à jour des sources de cette branche, exécutez `docker compose up -d --build`. Arrêtez les services avec `docker compose down`. Les sessions Web durent au maximum 7 jours et nécessitent une nouvelle connexion après redémarrage ; les sessions VRChat persistées restent distinctes. Après modification du mot de passe Web, exécutez `docker compose up -d --force-recreate web`.
+
+## Développement et documentation détaillée
+
+Consultez le [README anglais](README.md) pour l’architecture, la compilation, les migrations et la synchronisation avec le projet d’origine. Les adaptations se trouvent principalement dans `crates/web-server` et `src/platform/web`. Les vérifications automatisées couvrent notamment l’authentification Web et les limites d’accès aux fichiers. La connexion VRChat réelle, la double authentification, les événements de longue durée et la livraison des Webhooks doivent encore être validés avec des comptes et des destinataires réels.
+
+## Crédits et licence
+
+Merci aux auteurs et contributeurs de [Map1en/VRCX-0](https://github.com/Map1en/VRCX-0). Ce dépôt est une version dérivée indépendante pour Docker et le Web. Signalez ici les problèmes propres à cette version. La licence [GNU GPL v3.0](LICENSE) est conservée. Pour les portions provenant de VRCX, consultez [NOTICE](NOTICE) et [LICENSES/MIT.txt](LICENSES/MIT.txt). Ce projet n’est pas approuvé par VRChat Inc. ; les marques appartiennent à leurs propriétaires respectifs.

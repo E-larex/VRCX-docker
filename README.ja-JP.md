@@ -1,124 +1,72 @@
-<div align="center">
-
-# <img src="images/VRCX-0.png" alt="VRCX-0 Logo" width="25"> VRCX-0
-
-### もっと速く、もっと軽い VRCX。
+# VRCX-0 Web
 
 [English](README.md) | [Français](README.fr-FR.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-Hant.md) | 日本語 | [한국어](README.ko-KR.md)
 
-[![Release](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/version.json&style=flat&color=4c566a&labelColor=1f2328&logo=github&logoColor=white)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Downloads](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/downloads.json&style=flat&color=4c566a&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/releases)
-[![Windows installer size](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/windows-installer-size.json&style=flat&label=installer&color=4c566a&labelColor=1f2328&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI%2BPHBhdGggZD0iTTIuNCAyLjRoOC41djguNUgyLjR6TTEzLjEgMi40SDIxLjZ2OC41aC04LjV6TTIuNCAxMy4xaDguNVYyMS42SDIuNHpNMTMuMSAxMy4xSDIxLjZWMjEuNmgtOC41eiIvPjwvc3ZnPg%3D%3D)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Discord](https://img.shields.io/discord/1494343220467994644?style=flat&logo=discord&logoColor=white&label=discord&color=5865f2&labelColor=1f2328)](https://discord.gg/fehKP3SVPN)
-<br>
-[![CI](https://img.shields.io/github/actions/workflow/status/Map1en/VRCX-0/ci.yml?branch=master&label=ci&style=flat&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/coverage.json&style=flat&color=4c566a&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-GPL--3.0-4c566a?style=flat&labelColor=1f2328)](LICENSE)
+**オリジナルの [VRCX-0](https://github.com/Map1en/VRCX-0) をベースに、ChatGPT 主導で開発した Docker 向け Web 版です。**
 
-[![Download](https://img.shields.io/badge/Download%20VRCX--0-4340a2?style=for-the-badge)](https://github.com/Map1en/VRCX-0/releases/latest)
+上流の **v2.32.0** を基に、Rust の業務ロジック、データベース、React の画面をできるだけ再利用しています。変更を小さく保ち、上流の機能を取り込みやすくする方針です。開発ブランチは `feat/web-headless` で、現在は初期の動作可能な段階です。
 
-Windows · macOS · Linux
+デスクトップやディスプレイのない Linux サーバーで動作し、ブラウザーから利用できます。単一ユーザー向けで、1 つのアクティブな VRChat アカウント、設定、データを複数のブラウザーで共有します。ChatGPT は開発に使用しており、基本機能の実行に ChatGPT アカウントは不要です。任意の AI 機能には別途プロバイダーの設定が必要です。
 
-![VRCX-0](images/screenshot-user-dialog.webp)
+## Docker Compose での起動
 
-</div>
+Linux、Docker、Docker Compose プラグインが必要です。このリポジトリのディレクトリで `cp .env.example .env` を実行し、`.env` に実際のドメインと 12 文字以上の専用 Web パスワードを設定します。
 
-VRChat のためのデスクトップツール。フレンドのオンライン状況や居場所の確認、出会った人や訪れたワールドの記録、お気に入りの整理など。
-
-VRCX-0 は、元 VRCX メンテナーの一人がゼロから書き直した VRCX です。Rust で再構築し、より速く、より軽く。何年分の記録があっても快適なままです。
-
-## 主な特徴
-
-- **何年分の記録でも快適** — VRCX が重くなるデータ量でも、VRCX-0 なら軽快。低スペック PC や NAS クラスの小型 PC でも動作
-- **メモリ使用量は VRCX の約 50%〜70% 減**
-- **バックグラウンドモードならメモリ数十 MB**、主要機能はそのまま動作
-- **アバター 1 体分より小さい** — ダウンロード 10 MB 台、インストール後 30 MB 台。VRCX の 10 分の 1 以下
-- **スムーズな乗り換え** — VRCX のデータベースと設定を自動インポート。VRCX 側のデータベースには手を加えないので、いつでも戻せます
-
-### VRCX-0 だけの機能
-
-- **AI アシスタント** — VRChat での交流をひも解く。よく遊ぶ相手、疎遠になりつつある相手、フレンドに会いやすい時間帯まで。普段使いの AI サービスをつなぐだけ
-- **サイドバーモード** — 細いサイドバーでフレンドの動きをいつでもチェック。Windows・macOS では画面端で自動的に隠せます
-- **ショートカット** — よく使う操作はマウスなしで。Windows ではグローバルショートカットにも対応
-- **ロック** — パスコードで画面をロックし、プライバシーを保護
-- **共有** — ワールドコレクション・ワールド・アバター・インスタンスの共有リンクを作成
-
-### 上級者向け
-
-- **MCP サーバー** — 外部の AI ツールからローカルのソーシャルデータを直接活用
-- **アプリ連携 API** — 外部アプリにゲーム中のデータをリアルタイムで提供
-- **ヘッドレスモード** — UI なしで動作。`crates/headless` を参照
-
-### VRCX との違い
-
-| 機能                           | VRCX                                                             | VRCX-0（+ は追加分）                                                         |
-| ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **ソーシャルオートメーション** | 一人かどうかでステータスを切り替え；招待リクエストに自動返信     | + 時間ルール、優先度付きの複数状況ルール、終了時に元のステータスへ復元       |
-| **通知**                       | デスクトップ・読み上げ・XSOverlay・OVR Toolkit・手首オーバーレイ | + Discord 互換 Webhook、通知の一時停止；全チャンネルでイベントごとに絞り込み |
-| **VR オーバーレイ**            | ブラウザ描画（100 MB 以上）；OpenVR                              | + ネイティブ描画（数十 MB）；OpenXR（**WiVRn で実機確認済み**）              |
-| スクリーンショット             | メタデータの表示と検索                                           | + グリッド表示、一括管理、ZIP 書き出し                                       |
-| アバター詳細                   | パフォーマンスランクとファイルサイズ                             | + 詳細なパフォーマンス指標をプラットフォームごとの上限と比較                 |
-| バックアップ                   | VRChat のレジストリ設定                                          | + データベースの定期バックアップ、ワンクリック復元                           |
-| フレンドの現在地               | 同じインスタンスごとにまとめて表示                               | + ワールド表示                                                               |
-| グループ管理                   | 公開設定は 1 件ずつ                                              | + 一括退出・一括公開設定；プレイヤーリストにグループロールを表示             |
-| テーマ                         | 内蔵テーマ、カスタム CSS ファイル                                | + コミュニティテーマ、背景画像、アプリ内 CSS 編集、アクセントカラー          |
-| ゲームログ                     | 全アカウントのログが混在                                         | アカウントごとに分けて保存                                                   |
-
-VRCX のそのほかの機能も、VRCX-0 にそのまま揃っています。
-
-## インストール
-
-[最新リリース](https://github.com/Map1en/VRCX-0/releases/latest) から、お使いのプラットフォーム向けのファイルをダウンロードしてください。
-
-| プラットフォーム        | ファイル                                       |
-| ----------------------- | ---------------------------------------------- |
-| Windows                 | `VRCX-0_<バージョン>_windows_x86_64_setup.exe` |
-| macOS（Apple シリコン） | `VRCX-0_<バージョン>_macos_aarch64.dmg`        |
-| macOS（Intel）          | `VRCX-0_<バージョン>_macos_x86_64.dmg`         |
-| Linux                   | `.AppImage`、`.deb`、`.rpm`                    |
-
-macOS で初回起動がブロックされた場合は、**システム設定 → プライバシーとセキュリティ** で **このまま開く** をクリックしてください。
-
-### Linux
-
-アプリ画面のハードウェアアクセラレーションは初期状態でオフです。**設定 → システム → ハードウェアアクセラレーション（試験的）** からオンにでき、表示に問題があれば VRCX-0 が自動でオフに戻します。`WEBKIT_DISABLE_DMABUF_RENDERER` を自分で設定している場合、この項目は表示されません。
-
-## フィードバック
-
-- 質問・交流：[Discord](https://discord.gg/fehKP3SVPN)
-- 不具合報告・機能リクエスト：[GitHub Issues](https://github.com/Map1en/VRCX-0/issues)
-- 開発ブログ：[blog.vrcx-0.dev](https://blog.vrcx-0.dev/ja/)
-
-## ソースからビルド
-
-以下の手順は、VRCX-0 の開発に参加する場合や、ローカルでビルドする場合に使用します。コントリビュートする前に [CONTRIBUTING.md](CONTRIBUTING.md) をご覧ください。
-
-必要なもの：Node.js ≥ 24.10、npm ≥ 11.5、rustup 経由でインストールした安定版 Rust ツールチェーン。
-Windows の場合は、**Visual Studio Build Tools** をインストールし、**「C++ によるデスクトップ開発」** を選択してください。
-
-```bash
-git clone https://github.com/Map1en/VRCX-0
-cd VRCX-0
-
-npm install
+```dotenv
+VRCX_WEB_ORIGIN=https://vrcx.example.com
+VRCX_WEB_PASSWORD=replace-with-your-own-strong-password
+VRCX_WEB_LAN_MODE=0
+VRCX_WEB_LISTEN=127.0.0.1
+VRCX_WEB_PORT=8080
+TZ=Asia/Shanghai
 ```
 
-開発サーバーを起動：
+ビルドして起動します。
 
-```bash
-npm run tauri:dev
+```sh
+docker compose up -d --build
+docker compose logs -f web
 ```
 
-リリースビルド（署名とインストーラー生成をスキップ）：
+初期設定では `127.0.0.1:8080` のみで待ち受けます。`VRCX_WEB_ORIGIN` はブラウザーの URL のスキーム、ホスト名、ポートと完全に一致させ、サブパスを含めないでください。[Nginx 設定例](deploy/nginx.web.conf) を HTTPS の `server` ブロックに追加します。証明書と HTTPS リダイレクトは Nginx が担当し、アプリは HTTP で動作します。SSE 用のプロキシバッファリングは無効にしてください。Nginx もコンテナーの場合は同じ Docker ネットワークに接続し、転送先を `web:8080` にします。
 
-```bash
-npm run tauri:build -- --no-sign --no-bundle
+最初に Web パスワードでログインし、その後、元の画面から VRChat にログインして二要素認証を完了します。Web パスワードと VRChat のパスワードは別々です。
+
+## LAN 内で HTTP を使う
+
+ドメイン、証明書、Nginx なしでも利用できます。Web パスワードを設定したまま、`.env` を変更します。
+
+```dotenv
+VRCX_WEB_LAN_MODE=1
+VRCX_WEB_LISTEN=0.0.0.0
+VRCX_WEB_PORT=8080
 ```
 
-## ライセンス
+`docker compose up -d --build` を実行し、`http://サーバーのLAN内IP:8080` にアクセスします。このモードは `VRCX_WEB_ORIGIN` を無視し、Origin と Host の一致を確認します。プライベート IPv4、IPv6 ULA、リンクローカル、ループバック IP、`localhost` に対応します。通常のドメイン名では固定 Origin モードを使用します。HTTP ではクリップボード機能が制限される場合があります。HTTPS に戻す場合は LAN モードを `0` にし、待ち受けアドレスと実際の HTTPS Origin を戻してください。
 
-VRCX-0 は GNU General Public License v3.0（GPLv3）の下で公開されています。
+## 機能とバックグラウンド動作
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0?ref=badge_large)
+- 元の画面と、フレンドの状態、交流履歴、お気に入り、ワールド、アバター、グループ、招待、通知、メモ、タグ、統計を再利用します。
+- Webhook、リモートロガー連携、翻訳、任意の AI 連携を維持します。外部サービスの設定は別途必要です。Webhook はサーバーから送信します。
+- ブラウザーを閉じたり Web サイトからログアウトしても記録を継続します。VRChat 自体からログアウトすると VRChat セッションは終了します。
+- ローカルのゲームプロセス、ゲームログ、スクリーンショット監視、VR Overlay は無効です。トレイ、ウィンドウ操作、自動起動、デスクトップ通知、Discord RPC などの項目は非表示です。
+- 履歴の期限による自動削除は追加しません。既存の保守処理とバックアップ保持設定は元の仕様に従います。
+- フレンド／お気に入りは通常 1 時間ごと、現在のユーザーは 5 分ごとに更新します。プロフィール文のスキャンは初期状態では無効です。有効にすると 3 秒ごとに候補 1 人を処理し、同じユーザーは最低 12 時間空けます。元のスケジュールとレート制限が適用されます。
 
-VRCX-0 は VRChat Inc. の公認を受けたものではありません。VRChat および関連するすべての名称・ロゴは VRChat Inc. の商標または登録商標です。
+## データ、バックアップ、更新
+
+データベース、セッション、設定、キャッシュ、バックアップは **`./data`** に保存され、コンテナーを再作成しても維持されます。`init-data` が正常終了して停止するのは通常の動作です。サービスの UID/GID は `10001:10001` です。ディレクトリ全体をバックアップ・移行するときは `./data/.machine-id` も必ず含めてください。稼働中の複数インスタンスで同じデータディレクトリを共有しないでください。
+
+ファイル操作はブラウザーのアップロード／ダウンロードに置き換えられ、1 リクエストのアップロード上限は 256 MiB です。手動エクスポートのコピーは `./data/web-files`、VRCX 移行データは `./data/legacy` に保存します。既存の画面から `.vrcx0backup` を復元できます。
+
+全体バックアップは `docker compose stop web` の後、隠しファイルを含む `./data` 全体をコピーし、`docker compose start web` で再開します。復元時の所有者は `10001:10001` にしてください。バックアップにはアカウントセッションが含まれます。
+
+本ブランチのソース更新後に `docker compose up -d --build` を実行します。停止は `docker compose down` です。Web セッションは最長 7 日で、サーバー再起動後は再ログインが必要です。永続化された VRChat セッションは別に保持されます。Web パスワード変更後は `docker compose up -d --force-recreate web` を実行します。
+
+## 開発と詳細な手順
+
+構成、ソースからのビルド、移行、上流との同期については [English README](README.md) を参照してください。Web 向けの変更は主に `crates/web-server` と `src/platform/web` にあります。自動検証は Web 認証やファイルアクセス境界などを対象とします。実際の VRChat ログイン、二要素認証、長時間のイベント受信、Webhook 配信は実アカウントと受信先での確認が必要です。
+
+## クレジットとライセンス
+
+[Map1en/VRCX-0](https://github.com/Map1en/VRCX-0) の作者と貢献者に感謝します。本リポジトリは独立した Docker Web 派生版です。Web 版の問題は本リポジトリに報告してください。[GNU GPL v3.0](LICENSE) を継承します。VRCX 由来のコードの帰属と MIT ライセンスは [NOTICE](NOTICE) および [LICENSES/MIT.txt](LICENSES/MIT.txt) を参照してください。本プロジェクトは VRChat Inc. の公式な承認を受けていません。商標は各権利者に帰属します。

@@ -1,124 +1,72 @@
-<div align="center">
-
-# <img src="images/VRCX-0.png" alt="VRCX-0 Logo" width="25"> VRCX-0
-
-### 更快、更輕的 VRCX。
+# VRCX-0 Web
 
 [English](README.md) | [Français](README.fr-FR.md) | [简体中文](README.zh-CN.md) | 繁體中文 | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
 
-[![Release](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/version.json&style=flat&color=4c566a&labelColor=1f2328&logo=github&logoColor=white)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Downloads](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/downloads.json&style=flat&color=4c566a&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/releases)
-[![Windows installer size](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/windows-installer-size.json&style=flat&label=installer&color=4c566a&labelColor=1f2328&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI%2BPHBhdGggZD0iTTIuNCAyLjRoOC41djguNUgyLjR6TTEzLjEgMi40SDIxLjZ2OC41aC04LjV6TTIuNCAxMy4xaDguNVYyMS42SDIuNHpNMTMuMSAxMy4xSDIxLjZWMjEuNmgtOC41eiIvPjwvc3ZnPg%3D%3D)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Discord](https://img.shields.io/discord/1494343220467994644?style=flat&logo=discord&logoColor=white&label=discord&color=5865f2&labelColor=1f2328)](https://discord.gg/fehKP3SVPN)
-<br>
-[![CI](https://img.shields.io/github/actions/workflow/status/Map1en/VRCX-0/ci.yml?branch=master&label=ci&style=flat&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/coverage.json&style=flat&color=4c566a&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-GPL--3.0-4c566a?style=flat&labelColor=1f2328)](LICENSE)
+**基於原版 [VRCX-0](https://github.com/Map1en/VRCX-0)、由 ChatGPT 驅動開發的 Docker 網頁版本。**
 
-[![Download](https://img.shields.io/badge/Download%20VRCX--0-4340a2?style=for-the-badge)](https://github.com/Map1en/VRCX-0/releases/latest)
+本分支以 **v2.32.0** 為基礎，盡可能共用原版 Rust 業務邏輯、資料庫與 React 介面，減少修改以方便同步上游。開發分支為 `feat/web-headless`，目前處於初步可用階段。
 
-Windows · macOS · Linux
+在沒有桌面或顯示器的 Linux 伺服器上執行，透過瀏覽器操作。適用於單一使用者：一個使用中的 VRChat 帳號，多個瀏覽器共用設定與資料。ChatGPT 用於開發，基本服務執行不需要 ChatGPT 帳號；選用 AI 功能仍需自行設定服務。
 
-![VRCX-0](images/screenshot-user-dialog.webp)
+## Docker Compose 部署
 
-</div>
+需要 Linux、Docker 與 Docker Compose 外掛。在本專案目錄執行 `cp .env.example .env`，編輯 `.env`，填入實際網域及至少 12 個字元的獨立網站密碼：
 
-VRChat 桌面輔助工具：查看好友上線狀態與所在位置、記錄遇過的人和去過的世界、管理收藏等。
-
-VRCX-0 是 VRCX 的完全重寫版本，由 VRCX 前任維護者之一開發。以 Rust 重建，更快、更輕，多年累積的資料依然流暢。
-
-## 主要特點
-
-- **多年紀錄依然流暢** — VRCX 明顯變卡的資料量，VRCX-0 依然流暢；老電腦、NAS 級小主機也能執行
-- **記憶體用量比 VRCX 低約 50%–70%**
-- **背景模式僅需數十 MB 記憶體**，核心功能照常運作
-- **比一個模型還小** — 下載 10 多 MB，安裝後 30 多 MB，不到 VRCX 的十分之一
-- **無縫遷移** — 自動匯入 VRCX 資料庫與設定，不更動 VRCX 原有資料庫，隨時可以切換回去
-
-### VRCX-0 獨有
-
-- **AI 助手** — 洞察你的 VRChat 社交：常和誰一起玩、和誰漸行漸遠、何時最容易遇到好友；接入你常用的 AI 服務即可使用
-- **側欄模式** — 以窄側欄隨時留意好友動態；Windows、macOS 支援貼邊自動隱藏
-- **快捷鍵** — 常用操作不必碰滑鼠；Windows 支援全域快捷鍵
-- **鎖定** — 密碼鎖定介面，保護你的隱私
-- **分享** — 世界收藏集、世界、角色、房間皆可產生分享連結
-
-### 進階
-
-- **MCP 伺服器** — 讓外部 AI 工具直接使用你的本機社交資料
-- **整合 API** — 為第三方應用程式提供遊戲內即時資料
-- **無介面模式（Headless）** — 無介面執行，詳見 `crates/headless`
-
-### 與 VRCX 的差異
-
-| 功能           | VRCX                                           | VRCX-0（+ 為新增）                                     |
-| -------------- | ---------------------------------------------- | ------------------------------------------------------ |
-| **社交自動化** | 依是否獨處切換狀態；自動回覆加入申請           | + 定時規則、多條情境規則與優先順序、結束後還原原本狀態 |
-| **通知**       | 桌面、語音、XSOverlay、OVR Toolkit、腕部懸浮層 | + Discord Webhook、勿擾模式；所有通道依事件獨立篩選    |
-| **VR 懸浮層**  | 瀏覽器算繪（100 MB+）；OpenVR                  | + 原生算繪（數十 MB）；OpenXR（**WiVRn 實測通過**）    |
-| 螢幕截圖       | 檢視與搜尋中繼資料                             | + 格狀檢視、批次管理、匯出 ZIP                         |
-| 角色資訊       | 效能等級、檔案大小                             | + 完整效能指標，對照各平台上限                         |
-| 備份           | VRChat 登錄檔設定                              | + 資料庫定期備份、一鍵還原                             |
-| 好友位置       | 依同一房間分組                                 | + 世界檢視                                             |
-| 群組管理       | 逐一設定可見性                                 | + 批次退出、批次設定可見性；玩家列表顯示群組身分組     |
-| 主題           | 內建主題、自訂 CSS 檔案                        | + 社群主題、背景圖片、應用程式內 CSS 編輯、強調色      |
-| 遊戲紀錄       | 多帳號紀錄混在一起                             | 依帳號分開儲存                                         |
-
-VRCX 的其他功能，VRCX-0 同樣具備。
-
-## 安裝
-
-在 [最新 Release](https://github.com/Map1en/VRCX-0/releases/latest) 下載對應平台的檔案：
-
-| 平台                | 檔案                                       |
-| ------------------- | ------------------------------------------ |
-| Windows             | `VRCX-0_<版本號>_windows_x86_64_setup.exe` |
-| macOS（Apple 晶片） | `VRCX-0_<版本號>_macos_aarch64.dmg`        |
-| macOS（Intel）      | `VRCX-0_<版本號>_macos_x86_64.dmg`         |
-| Linux               | `.AppImage`、`.deb` 或 `.rpm`              |
-
-macOS 首次啟動若被系統阻擋，請前往 **系統設定 → 隱私權與安全性**，點選 **強制打開**。
-
-### Linux
-
-軟體介面的硬體加速預設關閉，可在 **設定 → 系統 → 硬體加速（實驗性）** 中開啟；若介面顯示異常，VRCX-0 會自動關閉硬體加速。自行設定 `WEBKIT_DISABLE_DMABUF_RENDERER` 時不會顯示此選項。
-
-## 回饋與交流
-
-- 交流與提問：[Discord](https://discord.gg/fehKP3SVPN)
-- 問題回報與功能建議：[GitHub Issues](https://github.com/Map1en/VRCX-0/issues)
-- 開發 blog：[blog.vrcx-0.dev](https://blog.vrcx-0.dev/zh/)
-
-## 從原始碼建置
-
-以下步驟適用於參與開發，或在本機自行建置 VRCX-0。參與貢獻前，請先閱讀 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-依賴：Node.js ≥ 24.10、npm ≥ 11.5，以及透過 rustup 安裝的穩定版 Rust 工具鏈。
-Windows 使用者還需安裝 **Visual Studio Build Tools**，並勾選 **「使用 C++ 的桌面開發」**。
-
-```bash
-git clone https://github.com/Map1en/VRCX-0
-cd VRCX-0
-
-npm install
+```dotenv
+VRCX_WEB_ORIGIN=https://vrcx.example.com
+VRCX_WEB_PASSWORD=replace-with-your-own-strong-password
+VRCX_WEB_LAN_MODE=0
+VRCX_WEB_LISTEN=127.0.0.1
+VRCX_WEB_PORT=8080
+TZ=Asia/Shanghai
 ```
 
-啟動開發伺服器：
+建置並啟動：
 
-```bash
-npm run tauri:dev
+```sh
+docker compose up -d --build
+docker compose logs -f web
 ```
 
-建置發佈版（略過簽署和安裝程式）：
+預設只監聽 `127.0.0.1:8080`。`VRCX_WEB_ORIGIN` 必須與瀏覽器網址的協定、網域及連接埠完全一致，不包含子路徑。將 [Nginx 設定片段](deploy/nginx.web.conf) 放入該網域的 HTTPS `server` 區塊；Nginx 負責憑證及 HTTPS 轉址，應用程式使用 HTTP，SSE 事件串流須關閉代理緩衝。若 Nginx 也在容器中，使用共用 Docker 網路及 `web:8080` 作為代理目標。
 
-```bash
-npm run tauri:build -- --no-sign --no-bundle
+首次開啟網頁時先輸入網站密碼，再於原版介面登入 VRChat 並完成兩步驟驗證。網站密碼與 VRChat 密碼彼此獨立。
+
+## 區域網路 HTTP 模式
+
+不需要網域、憑證或 Nginx。保留網站密碼，修改 `.env`：
+
+```dotenv
+VRCX_WEB_LAN_MODE=1
+VRCX_WEB_LISTEN=0.0.0.0
+VRCX_WEB_PORT=8080
 ```
 
-## 授權條款
+再次執行 `docker compose up -d --build`，使用 `http://伺服器的區域網路IP:8080` 存取。此模式忽略 `VRCX_WEB_ORIGIN`，驗證 Origin 與 Host 相符，支援私有 IPv4、IPv6 ULA、鏈路本地、回環 IP 及 `localhost`。一般網域使用固定 Origin 模式。HTTP 下瀏覽器可能限制剪貼簿功能。回復 HTTPS 部署時，將 LAN 模式設為 `0`，還原監聽位址及實際 HTTPS Origin。
 
-VRCX-0 採用 GNU General Public License v3.0（GPLv3）授權。
+## 功能與背景執行
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0?ref=badge_large)
+- 保留好友狀態、社交紀錄、收藏、世界、虛擬形象、群組、邀請、通知、備註、標籤、統計與原版介面。
+- 保留 Webhook、遠端記錄器、翻譯與選用 AI 整合；第三方服務需另行設定。Webhook 由伺服器發送。
+- 關閉瀏覽器或登出網站後仍持續記錄。原版選單中的 VRChat 登出會結束 VRChat 工作階段。
+- 停用本機遊戲程序、遊戲日誌、螢幕擷取監測及 VR Overlay，隱藏系統匣、視窗、自動啟動、桌面通知及 Discord RPC 等桌面功能。
+- 不新增歷史紀錄到期清理；既有維護與備份保留設定沿用原版。
+- 好友／收藏通常每小時更新，目前使用者每 5 分鐘更新。簡介掃描預設關閉；啟用後每 3 秒處理一位候選使用者，同一人至少間隔 12 小時，仍受原版排程與限流影響。
 
-VRCX-0 未獲 VRChat Inc. 認可或背書。VRChat 及所有相關標誌均為 VRChat Inc. 的商標或註冊商標。
+## 資料、備份與更新
+
+資料庫、帳號工作階段、設定、快取和備份儲存在 **`./data`**，重建容器會保留資料。`init-data` 成功執行後退出屬正常行為，服務使用 UID/GID `10001:10001`。整目錄備份及搬移時，務必保留 `./data/.machine-id`；請勿讓多個執行中的實例共用資料目錄。
+
+原版匯入／匯出改用瀏覽器上傳／下載，單次上傳上限為 256 MiB。手動匯出副本位於 `./data/web-files`；VRCX 遷移資料位於 `./data/legacy`，也可透過原介面還原 `.vrcx0backup`。
+
+完整備份前執行 `docker compose stop web`，複製完整 `./data`（含隱藏檔），再執行 `docker compose start web`。還原時維持 `10001:10001` 擁有權。備份含帳號工作階段，請妥善保管。
+
+更新本分支原始碼後執行 `docker compose up -d --build`。停止服務使用 `docker compose down`。網站登入最長維持 7 天，伺服器重啟後需重新登入；已儲存的 VRChat 工作階段獨立保留。修改網站密碼後執行 `docker compose up -d --force-recreate web`。
+
+## 開發與詳細說明
+
+完整架構、原始碼建置、遷移與上游同步步驟見 [English README](README.md) 或 [简体中文说明](README.zh-CN.md)。網頁適配集中於 `crates/web-server` 與 `src/platform/web`。目前自動化驗證涵蓋網站鑑權與檔案邊界等；實際 VRChat 登入、兩步驟驗證、長時間事件及 Webhook 投遞仍需使用真實帳號與接收端驗收。
+
+## 來源與授權
+
+感謝 [Map1en/VRCX-0](https://github.com/Map1en/VRCX-0) 的作者與貢獻者。本倉庫是獨立衍生的 Docker 網頁版本，網頁版問題請在本倉庫回報。沿用 [GNU GPL v3.0](LICENSE)；來自 VRCX 的部分程式碼之著作權與 MIT 授權見 [NOTICE](NOTICE) 及 [LICENSES/MIT.txt](LICENSES/MIT.txt)。本專案不受 VRChat Inc. 官方認可，相關商標歸各權利人所有。

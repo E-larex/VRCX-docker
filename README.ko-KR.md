@@ -1,124 +1,72 @@
-<div align="center">
-
-# <img src="images/VRCX-0.png" alt="VRCX-0 Logo" width="25"> VRCX-0
-
-### 더 빠르고, 더 가벼운 VRCX.
+# VRCX-0 Web
 
 [English](README.md) | [Français](README.fr-FR.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-Hant.md) | [日本語](README.ja-JP.md) | 한국어
 
-[![Release](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/version.json&style=flat&color=4c566a&labelColor=1f2328&logo=github&logoColor=white)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Downloads](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/downloads.json&style=flat&color=4c566a&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/releases)
-[![Windows installer size](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/windows-installer-size.json&style=flat&label=installer&color=4c566a&labelColor=1f2328&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI%2BPHBhdGggZD0iTTIuNCAyLjRoOC41djguNUgyLjR6TTEzLjEgMi40SDIxLjZ2OC41aC04LjV6TTIuNCAxMy4xaDguNVYyMS42SDIuNHpNMTMuMSAxMy4xSDIxLjZWMjEuNmgtOC41eiIvPjwvc3ZnPg%3D%3D)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Discord](https://img.shields.io/discord/1494343220467994644?style=flat&logo=discord&logoColor=white&label=discord&color=5865f2&labelColor=1f2328)](https://discord.gg/fehKP3SVPN)
-<br>
-[![CI](https://img.shields.io/github/actions/workflow/status/Map1en/VRCX-0/ci.yml?branch=master&label=ci&style=flat&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/coverage.json&style=flat&color=4c566a&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-GPL--3.0-4c566a?style=flat&labelColor=1f2328)](LICENSE)
+**원본 [VRCX-0](https://github.com/Map1en/VRCX-0)를 기반으로 ChatGPT 주도로 개발한 Docker 웹 버전입니다.**
 
-[![Download](https://img.shields.io/badge/Download%20VRCX--0-4340a2?style=for-the-badge)](https://github.com/Map1en/VRCX-0/releases/latest)
+원본 **v2.32.0**에서 시작하여 Rust 비즈니스 로직, 데이터베이스, React 인터페이스를 최대한 재사용합니다. 변경을 최소화하여 향후 업스트림 기능을 가져오기 쉽게 유지합니다. 개발 브랜치는 `feat/web-headless`이며 현재 초기 동작 단계입니다.
 
-Windows · macOS · Linux
+데스크톱이나 디스플레이가 없는 Linux 서버에서 실행하고 브라우저로 접속합니다. 단일 사용자용으로, 하나의 활성 VRChat 계정과 설정 및 데이터를 여러 브라우저에서 공유합니다. ChatGPT는 개발에 사용되며 기본 서비스를 실행하는 데 ChatGPT 계정이 필요하지 않습니다. 선택 사항인 AI 기능은 별도의 서비스 설정이 필요합니다.
 
-![VRCX-0](images/screenshot-user-dialog.webp)
+## Docker Compose로 시작하기
 
-</div>
+Linux, Docker, Docker Compose 플러그인이 필요합니다. 이 저장소 디렉터리에서 `cp .env.example .env`를 실행하고 `.env`에 실제 도메인과 12자 이상의 별도 웹사이트 비밀번호를 설정합니다.
 
-VRChat 데스크톱 도우미. 친구의 접속 상태와 위치를 확인하고, 만난 사람과 방문한 월드를 기록하고, 즐겨찾기를 관리하는 등 다양한 기능을 제공합니다.
-
-VRCX-0는 VRCX의 이전 유지보수 담당자 중 한 명이 처음부터 다시 만든 VRCX입니다. Rust로 재구축해 더 빠르고 가벼우며, 몇 년치 기록이 쌓여도 쾌적합니다.
-
-## 주요 특징
-
-- **몇 년치 기록도 쾌적하게** — VRCX가 느려지는 데이터양도 VRCX-0에서는 쾌적하게 동작하며, 저사양 PC나 NAS급 미니 PC에서도 실행 가능
-- **VRCX 대비 메모리 약 50%–70% 절감**
-- **백그라운드 모드는 메모리 수십 MB**, 핵심 기능은 그대로 동작
-- **아바타 하나보다 작은 용량** — 다운로드 10MB대, 설치 후 30MB대로 VRCX의 10분의 1 이하
-- **간편한 마이그레이션** — VRCX 데이터베이스와 설정을 자동으로 가져오며, VRCX 쪽 데이터베이스는 수정하지 않아 언제든 되돌아갈 수 있음
-
-### VRCX-0에만 있는 기능
-
-- **AI 어시스턴트** — VRChat 소셜 생활을 한눈에. 자주 함께 노는 사람, 멀어지는 사람, 친구를 만나기 좋은 시간대까지. 사용 중인 AI 서비스를 연결하면 바로 사용 가능
-- **사이드바 모드** — 좁은 사이드바로 친구 동향을 언제든 확인. Windows·macOS에서는 화면 가장자리 자동 숨김 지원
-- **단축키** — 자주 쓰는 동작을 마우스 없이. Windows는 전역 단축키 지원
-- **잠금** — 비밀번호로 화면을 잠가 개인정보 보호
-- **공유** — 월드 컬렉션·월드·아바타·인스턴스 공유 링크 생성
-
-### 고급 사용자용
-
-- **MCP 서버** — 외부 AI 도구에서 로컬 소셜 데이터를 직접 활용
-- **통합 API** — 서드파티 앱에 게임 중 데이터를 실시간 제공
-- **헤드리스 모드** — UI 없이 실행. `crates/headless` 참고
-
-### VRCX와의 차이
-
-| 기능            | VRCX                                             | VRCX-0 (+ 는 추가된 기능)                                             |
-| --------------- | ------------------------------------------------ | --------------------------------------------------------------------- |
-| **소셜 자동화** | 혼자 여부에 따라 상태 전환; 참가 요청 자동 응답  | + 시간 규칙, 우선순위가 있는 여러 상황 규칙, 종료 시 이전 상태로 복원 |
-| **알림**        | 데스크톱·TTS·XSOverlay·OVR Toolkit·손목 오버레이 | + Discord 호환 Webhook, 방해 금지 모드; 모든 채널에서 이벤트별 필터   |
-| **VR 오버레이** | 브라우저 렌더링(100 MB 이상); OpenVR             | + 네이티브 렌더링(수십 MB); OpenXR(**WiVRn에서 실기기 테스트 완료**)  |
-| 스크린샷        | 메타데이터 보기·검색                             | + 그리드 보기, 일괄 관리, ZIP 내보내기                                |
-| 아바타 상세     | 성능 등급과 파일 크기                            | + 상세 성능 지표를 플랫폼별 상한과 비교                               |
-| 백업            | VRChat 레지스트리 설정                           | + 데이터베이스 정기 백업, 원클릭 복원                                 |
-| 친구 위치       | 같은 인스턴스별로 묶어 표시                      | + 월드 보기                                                           |
-| 그룹 관리       | 공개 설정은 하나씩                               | + 일괄 탈퇴·일괄 공개 설정; 플레이어 목록에 그룹 역할 표시            |
-| 테마            | 내장 테마, 커스텀 CSS 파일                       | + 커뮤니티 테마, 배경 이미지, 앱 내 CSS 편집, 강조색                  |
-| 게임 로그       | 모든 계정의 기록이 한데 섞임                     | 계정별로 따로 저장                                                    |
-
-VRCX의 나머지 기능은 VRCX-0에도 그대로 있습니다.
-
-## 설치
-
-[최신 릴리스](https://github.com/Map1en/VRCX-0/releases/latest)에서 사용 중인 플랫폼에 맞는 파일을 받으세요:
-
-| 플랫폼                | 파일                                     |
-| --------------------- | ---------------------------------------- |
-| Windows               | `VRCX-0_<버전>_windows_x86_64_setup.exe` |
-| macOS (Apple Silicon) | `VRCX-0_<버전>_macos_aarch64.dmg`        |
-| macOS (Intel)         | `VRCX-0_<버전>_macos_x86_64.dmg`         |
-| Linux                 | `.AppImage`, `.deb`, `.rpm`              |
-
-macOS에서 처음 실행이 차단되면 **시스템 설정 → 개인정보 보호 및 보안**에서 **그래도 열기**를 클릭하세요.
-
-### Linux
-
-앱 화면의 하드웨어 가속은 기본적으로 꺼져 있으며, **설정 → 시스템 → 하드웨어 가속 (실험적)** 항목에서 켤 수 있습니다. 화면이 제대로 표시되지 않으면 VRCX-0이 자동으로 다시 끕니다. `WEBKIT_DISABLE_DMABUF_RENDERER`를 직접 설정한 경우 이 옵션은 표시되지 않습니다.
-
-## 피드백
-
-- 질문 및 소통: [Discord](https://discord.gg/fehKP3SVPN)
-- 버그 제보 및 기능 요청: [GitHub Issues](https://github.com/Map1en/VRCX-0/issues)
-- 개발 블로그: [blog.vrcx-0.dev](https://blog.vrcx-0.dev/en/)
-
-## 소스에서 빌드
-
-다음 단계는 VRCX-0 개발에 참여하거나 로컬에서 직접 빌드할 때 사용합니다. 기여하기 전에 [CONTRIBUTING.md](CONTRIBUTING.md)를 확인하세요.
-
-필요 사항: Node.js ≥ 24.10, npm ≥ 11.5, rustup을 통해 설치한 안정 버전 Rust 툴체인.
-Windows에서는 **Visual Studio Build Tools**를 설치하고 **"C++를 사용한 데스크톱 개발"** 을 선택해야 합니다.
-
-```bash
-git clone https://github.com/Map1en/VRCX-0
-cd VRCX-0
-
-npm install
+```dotenv
+VRCX_WEB_ORIGIN=https://vrcx.example.com
+VRCX_WEB_PASSWORD=replace-with-your-own-strong-password
+VRCX_WEB_LAN_MODE=0
+VRCX_WEB_LISTEN=127.0.0.1
+VRCX_WEB_PORT=8080
+TZ=Asia/Shanghai
 ```
 
-개발 서버 실행:
+빌드하고 실행합니다.
 
-```bash
-npm run tauri:dev
+```sh
+docker compose up -d --build
+docker compose logs -f web
 ```
 
-릴리스 빌드 (서명 및 설치 프로그램 생성 생략):
+기본 주소는 `127.0.0.1:8080`입니다. `VRCX_WEB_ORIGIN`은 브라우저 주소의 프로토콜, 호스트, 포트와 정확히 일치해야 하며 하위 경로를 포함하면 안 됩니다. [Nginx 설정 예시](deploy/nginx.web.conf)를 HTTPS `server` 블록에 추가하세요. Nginx가 인증서와 HTTPS 리디렉션을 처리하고 앱은 HTTP로 실행됩니다. SSE 이벤트 스트림을 위해 프록시 버퍼링을 꺼야 합니다. Nginx도 컨테이너에서 실행한다면 같은 Docker 네트워크에 연결하고 프록시 대상을 `web:8080`으로 설정합니다.
 
-```bash
-npm run tauri:build -- --no-sign --no-bundle
+먼저 웹사이트 비밀번호로 로그인한 뒤 원본 인터페이스에서 VRChat 로그인과 2단계 인증을 완료합니다. 웹사이트 비밀번호와 VRChat 비밀번호는 별개입니다.
+
+## LAN HTTP 모드
+
+도메인, 인증서, Nginx 없이 사용할 수 있습니다. 웹사이트 비밀번호를 유지하고 `.env`를 변경합니다.
+
+```dotenv
+VRCX_WEB_LAN_MODE=1
+VRCX_WEB_LISTEN=0.0.0.0
+VRCX_WEB_PORT=8080
 ```
 
-## 라이선스
+`docker compose up -d --build`를 실행하고 `http://서버의LAN_IP:8080`으로 접속합니다. 이 모드는 `VRCX_WEB_ORIGIN`을 무시하고 Origin과 Host의 일치를 확인합니다. 사설 IPv4, IPv6 ULA, 링크 로컬 및 루프백 IP, `localhost`를 지원합니다. 일반 도메인은 고정 Origin 모드를 사용하세요. HTTP에서는 클립보드 기능이 제한될 수 있습니다. HTTPS로 돌아가려면 LAN 모드를 `0`으로 설정하고 바인딩 주소와 실제 HTTPS Origin을 복원합니다.
 
-VRCX-0는 GNU General Public License v3.0 (GPLv3)에 따라 배포됩니다.
+## 기능과 백그라운드 실행
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0?ref=badge_large)
+- 원본 화면과 친구 상태, 소셜 기록, 즐겨찾기, 월드, 아바타, 그룹, 초대, 알림, 메모, 태그, 통계를 유지합니다.
+- Webhook, 원격 로거 연동, 번역, 선택 사항인 AI 연동을 유지합니다. 외부 서비스는 별도 설정이 필요하며 Webhook은 서버에서 전송합니다.
+- 브라우저를 닫거나 웹사이트에서 로그아웃해도 수집을 계속합니다. VRChat에서 직접 로그아웃하면 VRChat 세션이 종료됩니다.
+- 로컬 게임 프로세스, 게임 로그, 스크린샷 감시, VR Overlay를 비활성화합니다. 트레이, 창 제어, 자동 시작, 데스크톱 알림, Discord RPC 등의 항목은 숨깁니다.
+- 기록 보관 기간에 따른 자동 삭제를 추가하지 않습니다. 기존 유지 관리와 백업 보관 설정은 원본을 따릅니다.
+- 친구/즐겨찾기는 보통 매시간, 현재 사용자 정보는 5분마다 갱신합니다. 소개문 스캔은 기본적으로 꺼져 있습니다. 켜면 3초마다 후보 한 명을 처리하고 같은 사용자는 최소 12시간 간격을 둡니다. 원본 스케줄과 요청 제한이 적용됩니다.
 
-VRCX-0는 VRChat Inc.의 승인을 받은 프로젝트가 아닙니다. VRChat 및 관련된 모든 자산은 VRChat Inc.의 상표 또는 등록 상표입니다.
+## 데이터, 백업 및 업데이트
+
+데이터베이스, 계정 세션, 설정, 캐시, 백업은 **`./data`**에 저장되므로 컨테이너를 다시 만들어도 유지됩니다. `init-data`가 성공한 뒤 종료되는 것은 정상입니다. 서비스의 UID/GID는 `10001:10001`입니다. 전체 디렉터리를 백업하거나 옮길 때 `./data/.machine-id`를 반드시 포함하세요. 실행 중인 여러 인스턴스가 하나의 데이터 디렉터리를 공유하면 안 됩니다.
+
+파일 작업은 브라우저 업로드/다운로드로 대체됩니다. 요청당 업로드 한도는 256 MiB입니다. 수동 내보내기 사본은 `./data/web-files`, VRCX 마이그레이션 데이터는 `./data/legacy`에 저장됩니다. 기존 복원 화면에서 `.vrcx0backup`을 사용할 수 있습니다.
+
+전체 백업은 `docker compose stop web` 실행 후 숨김 파일을 포함한 `./data` 전체를 복사하고 `docker compose start web`으로 다시 시작합니다. 복원 시 소유권은 `10001:10001`로 유지하세요. 백업에는 계정 세션이 포함됩니다.
+
+이 브랜치의 소스를 업데이트한 뒤 `docker compose up -d --build`를 실행합니다. 중지는 `docker compose down`입니다. 웹사이트 세션은 최대 7일이며 서버 재시작 후 다시 로그인해야 합니다. 저장된 VRChat 세션은 별도로 유지됩니다. 웹사이트 비밀번호를 변경한 뒤에는 `docker compose up -d --force-recreate web`을 실행합니다.
+
+## 개발 및 상세 안내
+
+구조, 소스 빌드, 마이그레이션, 업스트림 동기화는 [English README](README.md)를 참고하세요. 웹 어댑터는 주로 `crates/web-server`와 `src/platform/web`에 있습니다. 자동 검증은 웹 인증과 파일 접근 경계 등을 다룹니다. 실제 VRChat 로그인, 2단계 인증, 장시간 이벤트 수신, Webhook 전송은 실제 계정과 수신 대상으로 확인해야 합니다.
+
+## 출처와 라이선스
+
+[Map1en/VRCX-0](https://github.com/Map1en/VRCX-0)의 제작자와 기여자에게 감사드립니다. 이 저장소는 독립적인 Docker 웹 파생 버전이며 웹 버전 문제는 이 저장소에 제보하세요. [GNU GPL v3.0](LICENSE)을 따릅니다. VRCX에서 유래한 코드의 저작권 및 MIT 라이선스는 [NOTICE](NOTICE)와 [LICENSES/MIT.txt](LICENSES/MIT.txt)를 참고하세요. 본 프로젝트는 VRChat Inc.의 공식 승인을 받지 않았으며 관련 상표는 각 권리자에게 귀속됩니다.
