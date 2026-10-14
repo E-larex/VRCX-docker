@@ -34,6 +34,10 @@ docker compose logs -f web
 
 首次開啟網頁時先輸入網站密碼，再於原版介面登入 VRChat 並完成兩步驟驗證。網站密碼與 VRChat 密碼彼此獨立。
 
+### 網站密碼設定
+
+`VRCX_WEB_PASSWORD` 接受明文密碼或完整的 Argon2id v19 PHC 雜湊。使用外部工具和隨機鹽，為至少 12 字元的原密碼產生雜湊；伺服器無法從雜湊判斷原密碼長度。在 `.env` 中用單引號包住完整雜湊以保留 `$`，登入時仍輸入原密碼。`$argon2` 前綴保留給雜湊，格式錯誤會阻止啟動。已移除 `VRCX_WEB_PASSWORD_FILE`：請刪除該變數（包括空值）及舊掛載，改設 `VRCX_WEB_PASSWORD`，更新映像並重建 Web 容器。詳見[完整設定說明](README.md#website-password-configuration)。
+
 ## 區域網路 HTTP 模式
 
 不需要網域、憑證或 Nginx。修改 `.env`：

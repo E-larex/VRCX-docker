@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -19,6 +19,12 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const temporary = await mkdtemp(path.join(tmpdir(), 'vrcx-auth-browser-'));
 const data = path.join(temporary, 'data');
 const password = 'synthetic-browser-auth-password';
+const passwordHash = (
+    await readFile(
+        path.join(repo, 'crates/web-server/tests/fixtures/password.argon2'),
+        'utf8'
+    )
+).trim();
 let backend;
 let browser;
 let vite;
@@ -179,10 +185,12 @@ try {
         );
         await page.goto('about:blank');
     }
-    for (const lan of ['1', '0']) {
+    for (const [lan, configuredPassword] of ['1', '0'].flatMap((lan) =>
+        [password, passwordHash].map((value) => [lan, value])
+    )) {
         await startBackend({
             VRCX_WEB_LAN_MODE: lan,
-            VRCX_WEB_PASSWORD: password
+            VRCX_WEB_PASSWORD: configuredPassword
         });
         await context.clearCookies();
         assert.deepEqual(await session(), {
@@ -190,6 +198,29 @@ try {
             passwordRequired: true
         });
         await page.goto(origin);
+        assert.equal(
+            (
+                await context.request.post(`${origin}/api/login`, {
+                    headers: {
+                        Origin: 'http://attacker.example',
+                        'X-VRCX-Web': '1'
+                    },
+                    data: { password }
+                })
+            ).status(),
+            403
+        );
+        for (const invalid of [
+            'incorrect-password',
+            ...(configuredPassword === passwordHash ? [passwordHash] : [])
+        ]) {
+            const reply = await context.request.post(`${origin}/api/login`, {
+                headers: { Origin: origin, 'X-VRCX-Web': '1' },
+                data: { password: invalid }
+            });
+            assert.equal(reply.status(), 401);
+            await delay(1100);
+        }
         await page.getByLabel('Website password').fill(password);
         const events = page.waitForResponse(
             (r) => r.url().endsWith('/api/events') && r.status() === 200
@@ -222,16 +253,27 @@ try {
         }
     ])
         await startBackend(settings, true);
-    const passwordFile = path.join(temporary, 'password');
-    await writeFile(passwordFile, `${password}\n`, { mode: 0o600 });
-    await startBackend({
-        VRCX_WEB_LAN_MODE: '1',
-        VRCX_WEB_PASSWORD: '',
-        VRCX_WEB_PASSWORD_FILE: passwordFile
-    });
-    assert.equal((await session()).passwordRequired, true);
+    for (const value of ['', 'unused-password-file']) {
+        await startBackend(
+            {
+                VRCX_WEB_LAN_MODE: '1',
+                VRCX_WEB_PASSWORD: password,
+                VRCX_WEB_PASSWORD_FILE: value
+            },
+            true
+        );
+    }
+    for (const value of [
+        '$argon2id$broken',
+        passwordHash.replace('argon2id', 'argon2i')
+    ]) {
+        await startBackend(
+            { VRCX_WEB_LAN_MODE: '1', VRCX_WEB_PASSWORD: value },
+            true
+        );
+    }
     console.log(
-        'PASS: LAN empty/unset password, authenticated LAN/fixed-origin login and menu logout, cookie-free SSE, invalid configuration rejection and password-file precedence.'
+        'PASS: LAN empty/unset password, authenticated LAN/fixed-origin login and menu logout, cookie-free SSE, plaintext/Argon2id verification, origin rejection and removed password-file configuration rejection.'
     );
 } finally {
     await browser?.close();

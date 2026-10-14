@@ -15,7 +15,7 @@ npm ci
 npm run build:web
 cargo build --locked -p vrcx-0-web
 VRCX_WEB_ORIGIN=http://localhost:8080 \
-  VRCX_WEB_PASSWORD_FILE=/path/to/website-password \
+  VRCX_WEB_PASSWORD='synthetic-local-test-password' \
   VRCX_LEGACY_DATA_DIR=./data/legacy \
   target/debug/vrcx-0-web --data-dir ./data
 ```
@@ -36,7 +36,7 @@ Automated checks cover website authentication, origin validation, original datab
 
 After building the Web frontend and debug server, run `node scripts/check-web-folders.mjs` to check folder naming, uploads, selection, and persistence across a server restart in Chromium. The script starts isolated local services with temporary storage and synthetic website credentials, then removes its test data. Playwright and Chromium must be installed; `VRCX_TEST_PLAYWRIGHT_MODULE` can specify an external Playwright module and `VRCX_TEST_CHROMIUM` can specify the browser executable.
 
-Run `node scripts/check-web-auth.mjs` with the same Playwright setup to check passwordless LAN access, password-protected login, SSE, and the top-left website logout action using synthetic credentials. After building an image, `bash scripts/check-web-lan-image.sh IMAGE` checks both LAN authentication modes, rejects fixed-origin startup without a password, and verifies persistence across container recreation using an isolated volume.
+Run `node scripts/check-web-auth.mjs` with the same Playwright setup to check passwordless LAN access, plaintext and Argon2id password login, rejected legacy password-file configuration, SSE, and the top-left website logout action using synthetic credentials. After building an image, `bash scripts/check-web-lan-image.sh IMAGE` checks both LAN authentication modes, Argon2id `.env` interpolation and login, rejects fixed-origin startup without a password, and verifies persistence across container recreation using an isolated volume.
 
 The Web help menu, settings, login footer, and database-upgrade error dialog omit upstream feedback and community entries. The About dialog identifies `E-larex/VRCX-docker`, credits `Map1en/VRCX-0`, labels the bundled upstream version, and retains project and third-party license access. Desktop builds keep their original entries and About dialog. Run `node scripts/check-web-about.mjs` with the Playwright setup above to check these Web surfaces, stale feedback-tab fallback, localized About content, and license access using isolated data and synthetic website credentials.
 

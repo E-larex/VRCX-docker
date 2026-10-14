@@ -34,6 +34,10 @@ Par défaut, le service écoute sur `127.0.0.1:8080`. `VRCX_WEB_ORIGIN` doit cor
 
 Connectez-vous d’abord au site, puis à VRChat dans l’interface d’origine, avec l’authentification à deux facteurs si nécessaire. Le mot de passe du site est indépendant de celui de VRChat.
 
+### Configuration du mot de passe
+
+`VRCX_WEB_PASSWORD` accepte un mot de passe en clair ou un hash PHC Argon2id v19 complet, généré avec un outil externe et un sel aléatoire. Utilisez un mot de passe original d’au moins 12 caractères ; sa longueur ne peut pas être vérifiée à partir du hash. Dans `.env`, entourez le hash d’apostrophes simples pour préserver les `$`. Connectez-vous avec le mot de passe original. Le préfixe `$argon2` est réservé aux hashes ; un hash invalide bloque le démarrage. `VRCX_WEB_PASSWORD_FILE` a été supprimé : retirez cette variable (même vide) et son montage, puis configurez `VRCX_WEB_PASSWORD`, mettez l’image à jour et recréez le conteneur Web. Voir les [instructions complètes](README.md#website-password-configuration).
+
 ## Accès HTTP sur le réseau local
 
 Ce mode ne nécessite ni domaine, ni certificat, ni Nginx. Modifiez `.env` :

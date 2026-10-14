@@ -70,14 +70,13 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     if !lan_mode && origin.trim().is_empty() {
         return Err("Set VRCX_WEB_ORIGIN or enable VRCX_WEB_LAN_MODE for LAN HTTP access".into());
     }
-    let password = if let Ok(file) = std::env::var("VRCX_WEB_PASSWORD_FILE") {
-        std::fs::read_to_string(file)?
-    } else {
-        match std::env::var("VRCX_WEB_PASSWORD") {
-            Ok(password) => password,
-            Err(std::env::VarError::NotPresent) => String::new(),
-            Err(error) => return Err(error.into()),
-        }
+    if std::env::var_os("VRCX_WEB_PASSWORD_FILE").is_some() {
+        return Err("VRCX_WEB_PASSWORD_FILE is no longer supported; remove it and set VRCX_WEB_PASSWORD to a plaintext password or Argon2id hash".into());
+    }
+    let password = match std::env::var("VRCX_WEB_PASSWORD") {
+        Ok(password) => password,
+        Err(std::env::VarError::NotPresent) => String::new(),
+        Err(_) => return Err("VRCX_WEB_PASSWORD must contain valid Unicode".into()),
     };
     let auth = Arc::new(Auth::with_lan_mode(
         password.trim_end_matches(['\r', '\n']),

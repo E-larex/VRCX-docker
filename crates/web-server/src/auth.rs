@@ -1,3 +1,4 @@
+use argon2::{password_hash::phc::PasswordHash, Argon2, Params, PasswordHasher, PasswordVerifier};
 use axum::http::HeaderMap;
 use sha2::{Digest, Sha256};
 use std::{
@@ -8,14 +9,13 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use vrcx_0_local_server::{generate_token, tokens_match};
+use vrcx_0_local_server::generate_token;
 
 const SESSION_AGE: Duration = Duration::from_secs(7 * 24 * 3600);
 pub const COOKIE: &str = "vrcx_web_session";
 
 pub struct Auth {
-    salt: String,
-    password_hash: Option<[u8; 32]>,
+    password_hash: Option<PasswordHash>,
     sessions: Mutex<HashMap<String, Instant>>,
     next_attempt: Mutex<Instant>,
     pub origin: String,
@@ -24,13 +24,37 @@ pub struct Auth {
     accepting_requests: AtomicBool,
 }
 
+// Keep configuration errors independent of the supplied secret.
+fn parse_password_hash(value: &str) -> Result<PasswordHash, String> {
+    const INVALID: &str = "VRCX_WEB_PASSWORD must contain a complete Argon2id v19 PHC hash";
+    let hash = PasswordHash::new(value).map_err(|_| INVALID.to_owned())?;
+    if hash.algorithm.as_str() != "argon2id"
+        || hash.version != Some(19)
+        || hash
+            .salt
+            .as_ref()
+            .is_none_or(|salt| salt.len() < argon2::MIN_SALT_LEN)
+        || hash.hash.is_none()
+        || ["m", "t", "p"]
+            .iter()
+            .any(|name| hash.params.get(*name).is_none())
+    {
+        return Err(INVALID.into());
+    }
+    Params::try_from(&hash).map_err(|_| INVALID.to_owned())?;
+    Ok(hash)
+}
+
 impl Auth {
     pub fn new(password: &str, origin: &str) -> Result<Self, String> {
         Self::with_lan_mode(password, origin, false)
     }
 
     pub fn with_lan_mode(password: &str, origin: &str, lan_mode: bool) -> Result<Self, String> {
-        if password.len() < 12 && !(lan_mode && password.is_empty()) {
+        if !password.starts_with("$argon2")
+            && password.len() < 12
+            && !(lan_mode && password.is_empty())
+        {
             return Err("The website password must contain at least 12 characters".into());
         }
         // LAN mode accepts the private IP used by the browser, without a fixed domain.
@@ -45,18 +69,19 @@ impl Auth {
         {
             return Err("VRCX_WEB_ORIGIN must be the public HTTP(S) origin, without a path".into());
         }
-        let salt = generate_token().map_err(|e| e.to_string())?;
-        let mut password_hash = [0; 32];
         let password_hash = if password.is_empty() {
             None
+        } else if password.starts_with("$argon2") {
+            Some(parse_password_hash(password)?)
         } else {
-            argon2::Argon2::default()
-                .hash_password_into(password.as_bytes(), salt.as_bytes(), &mut password_hash)
-                .map_err(|e| e.to_string())?;
-            Some(password_hash)
+            let salt = generate_token().map_err(|e| e.to_string())?;
+            Some(
+                Argon2::default()
+                    .hash_password_with_salt(password.as_bytes(), salt.as_bytes())
+                    .map_err(|e| e.to_string())?,
+            )
         };
         Ok(Self {
-            salt,
             password_hash,
             sessions: Mutex::new(HashMap::new()),
             next_attempt: Mutex::new(Instant::now()),
@@ -103,13 +128,9 @@ impl Auth {
         if password.len() > 1024 {
             return Err("Invalid password");
         }
-        let mut hash = [0; 32];
-        argon2::Argon2::default()
-            .hash_password_into(password.as_bytes(), self.salt.as_bytes(), &mut hash)
+        Argon2::default()
+            .verify_password(password.as_bytes(), expected)
             .map_err(|_| "Invalid password")?;
-        if !tokens_match(&hex_digest(&hash), &hex_digest(expected)) {
-            return Err("Invalid password");
-        }
         let token = generate_token().map_err(|_| "Unable to create session")?;
         let mut sessions = self.sessions.lock().unwrap();
         sessions.retain(|_, expiry| *expiry > Instant::now());
@@ -224,6 +245,73 @@ fn hex_digest(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Generated independently with Node.js crypto.argon2Sync; synthetic credentials only.
+    const HASH: &str = include_str!("../tests/fixtures/password.argon2");
+    const PASSWORD: &str = "synthetic-browser-auth-password";
+
+    #[test]
+    fn configured_hash_verifies_original_password_in_both_modes() {
+        for lan in [false, true] {
+            let auth =
+                Auth::with_lan_mode(HASH.trim_end(), "https://vrcx.example.com", lan).unwrap();
+            assert!(auth.password_required());
+            let token = auth.login(PASSWORD).unwrap();
+            assert!(auth.valid_token(&token));
+            assert_eq!(auth.login(PASSWORD), Err("Please wait before trying again"));
+            let mut headers = HeaderMap::new();
+            headers.insert("cookie", format!("{COOKIE}={token}").parse().unwrap());
+            auth.logout(&headers);
+            assert!(!auth.valid_token(&token));
+        }
+    }
+
+    #[test]
+    fn configured_hash_rejects_wrong_password_and_hash_as_password() {
+        for password in ["wrong-password", HASH.trim_end(), &"x".repeat(1025)] {
+            let auth = Auth::new(HASH.trim_end(), "https://vrcx.example.com").unwrap();
+            assert_eq!(auth.login(password), Err("Invalid password"));
+        }
+    }
+
+    #[test]
+    fn invalid_hash_configuration_never_falls_back_to_plaintext_or_passwordless() {
+        let hash = HASH.trim_end();
+        let invalid = [
+            "$argon2".to_owned(),
+            "$argon2id$invalid-config".to_owned(),
+            hash.replace("argon2id", "argon2i"),
+            hash.replace("argon2id", "argon2d"),
+            hash.replace("v=19", "v=42"),
+            hash.replace("$v=19", ""),
+            hash.replace("m=19456", "m=1"),
+            hash.replace("t=2", "t=0"),
+            hash.replace("p=1", "p=0"),
+            hash.replace("t=2,", ""),
+            hash.replace("p=1", "p=1,unknown=1"),
+            hash.replace("c3ludGhldGljLXRlc3Qtc2FsdA", "YWJj"),
+            hash.rsplit_once('$').unwrap().0.to_owned(),
+            format!("{hash}!"),
+        ];
+        for value in invalid {
+            for lan in [false, true] {
+                let error = Auth::with_lan_mode(&value, "https://vrcx.example.com", lan)
+                    .err()
+                    .expect("invalid hash must fail during startup");
+                assert_eq!(
+                    error,
+                    "VRCX_WEB_PASSWORD must contain a complete Argon2id v19 PHC hash"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn plaintext_passwords_may_contain_dollar_signs() {
+        let password = "literal$password$123";
+        let auth = Auth::new(password, "https://vrcx.example.com").unwrap();
+        assert!(auth.login(password).is_ok());
+    }
+
     #[test]
     fn only_lan_mode_allows_an_empty_password() {
         assert!(Auth::new("", "http://localhost:8080").is_err());

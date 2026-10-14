@@ -33,6 +33,20 @@ docker compose logs -f web
 
 仅在本机测试时，可把 `VRCX_WEB_ORIGIN` 改为 `http://localhost:8080`，通过完全相同的地址访问。公网使用配置好的 HTTPS 域名；HTTPS 模式的会话 Cookie 带有 Secure 标记。
 
+### 网站密码配置
+
+`VRCX_WEB_PASSWORD` 支持明文密码或完整的 Argon2id v19 PHC 哈希。用外部 Argon2id 工具为至少 12 字符的密码生成随机盐哈希，例如内存 `19456` KiB、迭代 `2` 次、并行度 `1`。复制包含算法、版本、参数、盐及摘要的完整输出；无需单独保存盐，项目不提供生成命令。服务器无法从哈希判断原密码长度。
+
+在 `.env` 中用**单引号**包住哈希，避免 Compose 展开 `$`。以下仅示意格式，必须替换为工具生成的完整值：
+
+```dotenv
+VRCX_WEB_PASSWORD='$argon2id$v=19$m=19456,t=2,p=1$SALT_BASE64$HASH_BASE64'
+```
+
+登录时仍输入原始密码。`$argon2` 前缀保留给哈希使用，格式、算法或版本不支持时拒绝启动，不会回退到明文或免密码模式；其他非空值作为明文处理。两种格式在 LAN 模式下也都需要登录。
+
+已移除 `VRCX_WEB_PASSWORD_FILE`：只要仍设置该变量（包括空值），服务就会报迁移错误。请从服务环境中删除它及不再需要的密码文件挂载，将明文或哈希填写到 `VRCX_WEB_PASSWORD`。Compose 模板已传入此变量；升级镜像后重建 Web 容器，仅修改 `.env` 不会更新运行中的服务。更换哈希密码时重新生成完整哈希，并按下文更换网站密码的步骤重建容器。
+
 ### 局域网 HTTP 模式
 
 无需域名、证书或 Nginx。在 `.env` 中设置：
@@ -45,7 +59,7 @@ VRCX_WEB_PORT=8080
 
 然后运行 `docker compose pull` 和 `docker compose up -d`，通过 `http://服务器的局域网IP:8080` 访问，例如 `http://192.168.1.10:8080`。该模式忽略 `VRCX_WEB_ORIGIN`，校验请求 Origin 与 Host 一致；支持私有 IPv4、IPv6 ULA、链路本地及回环 IP，也支持 `localhost`。普通域名访问仍使用原来的固定 Origin 模式。
 
-如需免网站登录，将 `VRCX_WEB_PASSWORD` 留空或不设置。只有 `VRCX_WEB_LAN_MODE=1` 允许无密码启动；设置了密码仍需登录，且密码至少 12 个字符。免密码模式下，能够访问受支持局域网地址的用户可直接使用共享应用；VRChat 账号登录仍独立进行。独立运行服务器时，`VRCX_WEB_PASSWORD_FILE` 的内容优先于密码环境变量。
+如需免网站登录，将 `VRCX_WEB_PASSWORD` 留空或不设置。只有 `VRCX_WEB_LAN_MODE=1` 允许无密码启动；设置了密码仍需登录，且密码至少 12 个字符。免密码模式下，能够访问受支持局域网地址的用户可直接使用共享应用；VRChat 账号登录仍独立进行。
 
 `VRCX_WEB_LAN_MODE` 默认 `0`，HTTPS 域名及 Nginx 部署方式保持不变。切换回原模式时需设置网站密码，将 LAN 模式设为 `0`，恢复 `VRCX_WEB_LISTEN=127.0.0.1` 和实际 `VRCX_WEB_ORIGIN`。HTTP 局域网模式下，浏览器可能限制剪贴板等需要安全上下文的功能。
 

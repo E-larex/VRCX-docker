@@ -40,6 +40,20 @@ docker compose logs -f web
 
 The default bind address is `127.0.0.1:8080`. `VRCX_WEB_ORIGIN` must exactly match the browser's scheme, hostname, and port, without a subpath. Sign in to the website first, then use the original interface to sign in to VRChat and complete two-factor verification. Saved credentials and automatic login continue to use upstream behavior; server startup attempts to restore the saved VRChat session.
 
+### Website password configuration
+
+`VRCX_WEB_PASSWORD` accepts either a plaintext password or a complete Argon2id v19 PHC hash. Generate the hash with an external Argon2id tool using a fresh random salt and a password of at least 12 characters; for example, use memory `19456` KiB, iterations `2`, and parallelism `1`. Copy the entire PHC output, including its algorithm, version, parameters, salt, and digest. No separate salt setting or built-in generation command is needed. The server cannot determine the original password length from a hash.
+
+In `.env`, enclose the hash in **single quotes** so Docker Compose preserves every `$`. This illustrates the format only; replace it with the complete output from your tool:
+
+```dotenv
+VRCX_WEB_PASSWORD='$argon2id$v=19$m=19456,t=2,p=1$SALT_BASE64$HASH_BASE64'
+```
+
+Continue entering the original password in the browser. Values beginning with `$argon2` are reserved for hashes: malformed hashes, unsupported algorithms, and unsupported versions prevent startup instead of falling back to plaintext or passwordless access. Other nonempty values are plaintext passwords. Both formats require website login in LAN mode too.
+
+`VRCX_WEB_PASSWORD_FILE` has been removed. If it is still set, even to an empty value, startup fails with a migration message. Remove that variable from your service environment and put the plaintext password or its Argon2id hash in `VRCX_WEB_PASSWORD`; remove any obsolete password-file mount. The Compose template already forwards `VRCX_WEB_PASSWORD`. Upgrade the image and recreate the Web container using the [update procedure](#updating-and-stopping); changing `.env` alone does not update a running container. To rotate a hashed password, generate a fresh hash and follow the password-change procedure below.
+
 ### Public access through Nginx and HTTPS
 
 The application serves HTTP; Nginx handles the HTTPS certificate and HTTP-to-HTTPS redirect. Add [the Nginx configuration snippet](deploy/nginx.web.conf) to the HTTPS `server` block for your domain. Disable proxy buffering for the SSE event stream. If Nginx also runs in Docker, attach both services to a shared network and use `web:8080` as the proxy target.
@@ -58,7 +72,7 @@ VRCX_WEB_PORT=8080
 
 Run `docker compose pull` and `docker compose up -d`, then open `http://192.168.1.10:8080`, replacing the IP with your server's LAN address.
 
-To allow direct access without website login, leave `VRCX_WEB_PASSWORD` empty or unset. This is permitted only when `VRCX_WEB_LAN_MODE=1`; a configured password still requires login and must contain at least 12 characters. Anyone who can reach the supported LAN address can use the shared application in passwordless mode. VRChat account login remains separate. For standalone servers, `VRCX_WEB_PASSWORD_FILE` takes precedence over the password environment variable.
+To allow direct access without website login, leave `VRCX_WEB_PASSWORD` empty or unset. This is permitted only when `VRCX_WEB_LAN_MODE=1`; a configured password still requires login and must contain at least 12 characters. Anyone who can reach the supported LAN address can use the shared application in passwordless mode. VRChat account login remains separate.
 
 LAN mode ignores `VRCX_WEB_ORIGIN` and checks that the request Origin matches Host. Private IPv4, IPv6 ULA, link-local and loopback IPs, and `localhost` are supported. Ordinary domain names use the fixed-origin mode. Browser clipboard features may be restricted over HTTP.
 
