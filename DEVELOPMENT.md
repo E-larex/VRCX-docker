@@ -38,6 +38,8 @@ After building the Web frontend and debug server, run `node scripts/check-web-fo
 
 Run `node scripts/check-web-auth.mjs` with the same Playwright setup to check passwordless LAN access, password-protected login, SSE, and the top-left website logout action using synthetic credentials. After building an image, `bash scripts/check-web-lan-image.sh IMAGE` checks both LAN authentication modes, rejects fixed-origin startup without a password, and verifies persistence across container recreation using an isolated volume.
 
+The Web help menu, settings, login footer, and database-upgrade error dialog omit upstream feedback and community entries. The About dialog identifies `E-larex/VRCX-docker`, credits `Map1en/VRCX-0`, labels the bundled upstream version, and retains project and third-party license access. Desktop builds keep their original entries and About dialog. Run `node scripts/check-web-about.mjs` with the Playwright setup above to check these Web surfaces, stale feedback-tab fallback, localized About content, and license access using isolated data and synthetic website credentials.
+
 ## Continuous integration
 
 [CI](.github/workflows/ci.yml) runs on pushes and pull requests to `master`, and can also be started manually. Frontend formatting, lint, type checking, and tests run on Linux. Changes affecting the Web application, build inputs, deployment, or CI also run Web Rust formatting, Clippy, and tests, then build the `linux/amd64` Docker image and check its startup with isolated data. Documentation-only changes skip Rust and Docker jobs; manual runs execute all checks. CI builds do not publish images; publication follows [RELEASING.md](RELEASING.md).

@@ -19,6 +19,7 @@ import {
     PageScaffold,
     PageTitle
 } from '@/components/layout/PageScaffold';
+import { isWebHost } from '@/platform/host';
 import { Tabs, TabsList, TabsTrigger } from '@/ui/shadcn/tabs';
 
 import { SettingsAdvancedTab } from './components/settings-tabs/SettingsAdvancedTab';
@@ -94,12 +95,12 @@ function SettingsPageContent() {
                     <SettingsInterfaceTab />
                     <SettingsSocialTab />
                     <SettingsNotificationsTab />
-                    {import.meta.env.MODE !== 'web' && <SettingsVrTab />}
+                    {!isWebHost && <SettingsVrTab />}
                     <SettingsMediaTab />
                     <SettingsAiTab active={shell.activeSettingsTab === 'ai'} />
                     <SettingsIntegrationsTab />
                     <SettingsAdvancedTab />
-                    <SettingsFeedbackTab />
+                    {!isWebHost && <SettingsFeedbackTab />}
                 </div>
             </Tabs>
             <SettingsDialogs />

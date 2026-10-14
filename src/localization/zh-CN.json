@@ -3769,6 +3769,13 @@
             }
         },
         "about": {
+            "web": {
+                "description": "基于 VRCX-0 的独立 Docker Web 衍生版，由 ChatGPT 驱动开发。",
+                "attribution": "基于 Map1en/VRCX-0，感谢原作者及贡献者提供的应用、界面和功能。",
+                "repository": "Docker Web 项目仓库",
+                "upstream": "上游项目",
+                "version": "上游版本：{version}"
+            },
             "tagline": "由 Tauri 和 Rust 打造的快速、轻量 VRCX。",
             "contributors": "贡献者",
             "contributors_error": "贡献者列表加载失败。",

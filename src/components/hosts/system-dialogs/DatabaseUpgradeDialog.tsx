@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { IndeterminateProgress } from '@/components/IndeterminateProgress';
 import { useCriticalTask } from '@/lib/useCriticalTask';
+import { isWebHost } from '@/platform/host';
 import type { DatabaseUpgradeStage } from '@/platform/tauri/bindings';
 import {
     confirmLegacyDatabaseMigration,
@@ -176,16 +177,18 @@ function DatabaseUpgradeFailureView({
                     >
                         {t('message.database.open_failure_log_folder')}
                     </Button>
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                            void createDatabaseUpgradeGitHubIssue();
-                        }}
-                    >
-                        {t('message.database.create_github_issue')}
-                    </Button>
+                    {!isWebHost && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                                void createDatabaseUpgradeGitHubIssue();
+                            }}
+                        >
+                            {t('message.database.create_github_issue')}
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>

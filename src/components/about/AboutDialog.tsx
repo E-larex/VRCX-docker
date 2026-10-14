@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
+import { isWebHost } from '@/platform/host';
+import { WebAboutDialog } from '@/platform/web/WebAboutDialog';
 import { openExternalLink } from '@/services/entityMediaService';
 import { links } from '@/shared/constants/link';
 import { formatReleaseDisplayVersion } from '@/shared/utils/releaseVersion';
@@ -186,7 +188,17 @@ function AboutContributorsWall({ open }: { open: boolean }) {
     );
 }
 
-export function AboutVrcxDialog({
+export function AboutVrcxDialog(
+    props: Parameters<typeof DesktopAboutVrcxDialog>[0]
+) {
+    return isWebHost ? (
+        <WebAboutDialog {...props} />
+    ) : (
+        <DesktopAboutVrcxDialog {...props} />
+    );
+}
+
+function DesktopAboutVrcxDialog({
     open,
     onOpenChange,
     onOpenLicenses

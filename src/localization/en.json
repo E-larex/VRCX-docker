@@ -3775,6 +3775,13 @@
             }
         },
         "about": {
+            "web": {
+                "description": "An independent Docker Web edition of VRCX-0, with development driven by ChatGPT.",
+                "attribution": "Based on Map1en/VRCX-0. Thanks to the original authors and contributors for the application, interface, and features.",
+                "repository": "Docker Web repository",
+                "upstream": "Original project",
+                "version": "Upstream version: {version}"
+            },
             "tagline": "The fast, lightweight VRCX built with Tauri and Rust.",
             "contributors": "Contributors",
             "contributors_error": "Couldn't load the contributor list.",

@@ -1,3 +1,4 @@
+import { isWebHost } from '@/platform/host';
 import type { TranslationProvider } from '@/platform/tauri/bindings';
 import { AVATAR_AUTO_CLEANUP_OPTIONS } from '@/shared/constants/settings';
 
@@ -155,7 +156,7 @@ export const settingsTabs = [
     ['integrations', 'view.settings.category.integrations'],
     ['advanced', 'view.settings.category.advanced'],
     ['feedback', 'view.settings.category.feedback']
-].filter(([tab]) => import.meta.env.MODE !== 'web' || tab !== 'vr');
+].filter(([tab]) => !isWebHost || (tab !== 'vr' && tab !== 'feedback'));
 
 export function resolveActiveSettingsTab(
     requestedTab: string,

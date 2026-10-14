@@ -251,44 +251,59 @@ export function AppMenuBar({
                                 </MenuItem>
                             </MenubarGroup>
                             <MenubarSeparator />
-                            <MenubarGroup>
-                                <MenuItem
-                                    onClick={() =>
-                                        runAfterRestoringNormalWindow(() =>
-                                            navigate('/settings?tab=feedback')
-                                        )
-                                    }
-                                >
-                                    {t('app_menu.send_feedback')}
-                                </MenuItem>
-                                <MenuItem
-                                    onClick={() => openLink(links.issues)}
-                                >
-                                    {t('app_menu.report_issue')}
-                                </MenuItem>
-                            </MenubarGroup>
-                            <MenubarSeparator />
-                            <MenubarGroup>
-                                <MenuGroupLabel>
-                                    {t('app_menu.community')}
-                                </MenuGroupLabel>
-                                <MenuItem
-                                    onClick={() => openLink(links.github)}
-                                >
-                                    GitHub
-                                </MenuItem>
-                                <MenuItem
-                                    onClick={() => openLink(links.discord)}
-                                >
-                                    Discord
-                                </MenuItem>
-                                <MenuItem
-                                    onClick={() => openLink(links.qqGroup)}
-                                >
-                                    {t('nav_menu.qq_group')}
-                                </MenuItem>
-                            </MenubarGroup>
-                            <MenubarSeparator />
+                            {!isWebHost && (
+                                <>
+                                    <MenubarGroup>
+                                        <MenuItem
+                                            onClick={() =>
+                                                runAfterRestoringNormalWindow(
+                                                    () =>
+                                                        navigate(
+                                                            '/settings?tab=feedback'
+                                                        )
+                                                )
+                                            }
+                                        >
+                                            {t('app_menu.send_feedback')}
+                                        </MenuItem>
+                                        <MenuItem
+                                            onClick={() =>
+                                                openLink(links.issues)
+                                            }
+                                        >
+                                            {t('app_menu.report_issue')}
+                                        </MenuItem>
+                                    </MenubarGroup>
+                                    <MenubarSeparator />
+                                    <MenubarGroup>
+                                        <MenuGroupLabel>
+                                            {t('app_menu.community')}
+                                        </MenuGroupLabel>
+                                        <MenuItem
+                                            onClick={() =>
+                                                openLink(links.github)
+                                            }
+                                        >
+                                            GitHub
+                                        </MenuItem>
+                                        <MenuItem
+                                            onClick={() =>
+                                                openLink(links.discord)
+                                            }
+                                        >
+                                            Discord
+                                        </MenuItem>
+                                        <MenuItem
+                                            onClick={() =>
+                                                openLink(links.qqGroup)
+                                            }
+                                        >
+                                            {t('nav_menu.qq_group')}
+                                        </MenuItem>
+                                    </MenubarGroup>
+                                    <MenubarSeparator />
+                                </>
+                            )}
                             {developerToolsAvailable ? (
                                 <>
                                     <MenubarGroup>
