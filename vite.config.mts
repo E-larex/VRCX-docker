@@ -89,11 +89,23 @@ export default defineConfig(({ mode }) => {
                           name: 'vrcx-web-entry',
                           transformIndexHtml: {
                               order: 'pre' as const,
-                              handler: (html: string) =>
-                                  html.replace(
+                              handler: (html: string) => ({
+                                  html: html.replace(
                                       '/src/main.js',
                                       '/src/web-main.tsx'
-                                  )
+                                  ),
+                                  tags: [
+                                      {
+                                          tag: 'link',
+                                          attrs: {
+                                              rel: 'icon',
+                                              type: 'image/x-icon',
+                                              href: '/src-tauri/icons/icon.ico'
+                                          },
+                                          injectTo: 'head' as const
+                                      }
+                                  ]
+                              })
                           }
                       }
                   ]
