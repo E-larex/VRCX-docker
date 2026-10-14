@@ -1,3 +1,4 @@
+import { chooseDirectory } from './folderPicker';
 import { request, logoutWebsite } from './http';
 
 export type InvokeArgs = Record<string, unknown>;
@@ -37,7 +38,7 @@ async function pickFiles(
     }
     return paths;
 }
-async function uploadDirectory(legacy = false): Promise<string> {
+async function uploadLegacyDirectory(): Promise<string> {
     const files = await new Promise<File[]>((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -52,7 +53,6 @@ async function uploadDirectory(legacy = false): Promise<string> {
     for (const file of files) {
         const path = file.webkitRelativePath.split('/').slice(1).join('/');
         if (
-            legacy &&
             ![
                 'VRCX.sqlite3',
                 'VRCX.sqlite3-wal',
@@ -66,56 +66,10 @@ async function uploadDirectory(legacy = false): Promise<string> {
     }
     return (
         await request<{ path: string }>(
-            `/api/files/directory?legacy=${legacy}`,
+            '/api/files/directory?legacy=true',
             form
         )
     ).path;
-}
-async function chooseDirectory(): Promise<string> {
-    const chinese = navigator.language.startsWith('zh');
-    const dialog = document.createElement('dialog');
-    dialog.className =
-        'bg-card text-foreground border-border fixed m-auto max-w-sm space-y-4 rounded-xl border p-6';
-    const heading = document.createElement('h2');
-    heading.textContent = chinese ? '选择文件夹' : 'Choose a folder';
-    const description = document.createElement('p');
-    description.textContent = chinese
-        ? '上传文件夹用于导入或背景图片，或在服务器上新建文件夹用于自动备份。'
-        : 'Upload a folder for imports or images, or create a server folder for automatic backups.';
-    dialog.append(heading, description);
-    return new Promise((resolve, reject) => {
-        const button = (label: string, action: () => Promise<string>) => {
-            const element = document.createElement('button');
-            element.textContent = label;
-            element.className = 'bg-secondary m-1 rounded-md px-3 py-2';
-            element.onclick = () => {
-                dialog.close();
-                dialog.remove();
-                void action().then(resolve, reject);
-            };
-            dialog.append(element);
-        };
-        button(chinese ? '上传文件夹' : 'Upload folder', () =>
-            uploadDirectory()
-        );
-        button(
-            chinese ? '新建服务器文件夹' : 'New server folder',
-            async () =>
-                (
-                    await request<{ path: string }>('/api/files/reserve', {
-                        name: 'folder',
-                        directory: true
-                    })
-                ).path
-        );
-        button(chinese ? '取消' : 'Cancel', async () => '');
-        dialog.oncancel = () => {
-            dialog.remove();
-            resolve('');
-        };
-        document.body.append(dialog);
-        dialog.showModal();
-    });
 }
 async function watchDownload(path: string): Promise<void> {
     for (let attempt = 0; attempt < 600; attempt++) {
@@ -282,7 +236,7 @@ export async function invoke<T>(
             result = await pickFiles(true, 'image/*');
             break;
         case 'app__open_folder_selector_dialog':
-            result = await chooseDirectory();
+            result = await chooseDirectory(String(args.defaultPath ?? ''));
             break;
         case 'app__get_legacy_vrcx_force_migration_status': {
             result = await request<T>(`/api/invoke/${command}`, args);
@@ -292,7 +246,7 @@ export async function invoke<T>(
                 'available' in result &&
                 !result.available
             ) {
-                const path = await uploadDirectory(true);
+                const path = await uploadLegacyDirectory();
                 if (path)
                     result = await request<T>(`/api/invoke/${command}`, args);
             }

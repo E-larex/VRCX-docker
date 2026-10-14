@@ -202,6 +202,14 @@ pub fn router(state: WebState) -> Router {
             "/api/files/directory",
             post(crate::files::upload_directory).layer(DefaultBodyLimit::max(256 * 1024 * 1024)),
         )
+        .route(
+            "/api/files/folders",
+            get(crate::files::folders).post(crate::files::create_folder),
+        )
+        .route(
+            "/api/files/folders/select",
+            post(crate::files::select_folder),
+        )
         .route("/api/files/reserve", post(crate::files::reserve))
         .route("/api/files/read", get(crate::files::read))
         .route("/api/files/list", get(crate::files::list))

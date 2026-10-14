@@ -34,6 +34,8 @@ docker compose -f compose.example.yaml -f compose.build.yaml build
 
 Automated checks cover website authentication, origin validation, original database commands, desktop capability restrictions, and file access boundaries. Real VRChat account login, two-factor verification, long-running events, and third-party Webhook delivery still require acceptance testing with actual accounts and endpoints.
 
+After building the Web frontend and debug server, run `node scripts/check-web-folders.mjs` to check folder naming, uploads, selection, and persistence across a server restart in Chromium. The script starts isolated local services with temporary storage and synthetic website credentials, then removes its test data. Playwright and Chromium must be installed; `VRCX_TEST_PLAYWRIGHT_MODULE` can specify an external Playwright module and `VRCX_TEST_CHROMIUM` can specify the browser executable.
+
 ## Continuous integration
 
 [CI](.github/workflows/ci.yml) runs on pushes and pull requests to `master`, and can also be started manually. Frontend formatting, lint, type checking, and tests run on Linux. Changes affecting the Web application, build inputs, deployment, or CI also run Web Rust formatting, Clippy, and tests, then build the `linux/amd64` Docker image and check its startup with isolated data. Documentation-only changes skip Rust and Docker jobs; manual runs execute all checks. CI builds do not publish images; publication follows [RELEASING.md](RELEASING.md).
