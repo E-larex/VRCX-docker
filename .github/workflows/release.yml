@@ -5,7 +5,7 @@ on:
         tags:
             - 'v[0-9]*.[0-9]*.[0-9]*-web.[0-9]*'
 
-# Serialize all versions because they share the latest tag.
+# Serialize all versions because they share channel and commit tags.
 concurrency:
     group: release-web-image
     cancel-in-progress: false
@@ -22,6 +22,7 @@ jobs:
             image: ${{ steps.release.outputs.image }}
             version: ${{ steps.release.outputs.version }}
             sha_tag: ${{ steps.release.outputs.sha_tag }}
+            channel: ${{ steps.release.outputs.channel }}
         steps:
             - uses: actions/checkout@v7
               with:
@@ -81,6 +82,7 @@ jobs:
             IMAGE: ${{ needs.metadata.outputs.image }}
             VERSION: ${{ needs.metadata.outputs.version }}
             SHA_TAG: ${{ needs.metadata.outputs.sha_tag }}
+            CHANNEL: ${{ needs.metadata.outputs.channel }}
             DOCKER_BUILD_RECORD_UPLOAD: 'false'
         steps:
             - uses: actions/checkout@v7
@@ -121,19 +123,19 @@ jobs:
               env:
                   GH_TOKEN: ${{ github.token }}
               run: node scripts/web-release.ts check-unpublished
-            - name: Push the tested image, updating latest last
+            - name: Push the tested image, updating the channel last
               run: |
                   set -euo pipefail
                   docker push "$IMAGE:$VERSION"
                   docker tag "$IMAGE:$VERSION" "$IMAGE:$SHA_TAG"
                   docker push "$IMAGE:$SHA_TAG"
-                  docker tag "$IMAGE:$VERSION" "$IMAGE:latest"
-                  docker push "$IMAGE:latest"
+                  docker tag "$IMAGE:$VERSION" "$IMAGE:$CHANNEL"
+                  docker push "$IMAGE:$CHANNEL"
                   {
                       echo "Published $IMAGE:$VERSION (linux/amd64)"
                       echo
                       echo "Commit tag: $IMAGE:$SHA_TAG"
-                      echo "Latest: $IMAGE:latest"
+                      echo "Channel: $IMAGE:$CHANNEL"
                       echo
                       echo 'For the first release, set the GHCR package visibility to Public and verify an anonymous pull.'
                   } >> "$GITHUB_STEP_SUMMARY"

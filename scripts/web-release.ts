@@ -3,7 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const WEB_TAG =
-    /^v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)-web\.[1-9]\d*)$/;
+    /^v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)-web\.[1-9]\d*(?:-(beta)\.[1-9]\d*)?)$/;
 
 export function webReleaseMetadata(
     tag: string,
@@ -12,7 +12,9 @@ export function webReleaseMetadata(
 ) {
     const match = WEB_TAG.exec(tag);
     if (!match || match[1].length > 128) {
-        throw new Error('Expected a release tag such as v2.32.0-web.1');
+        throw new Error(
+            'Expected a release tag such as v2.32.0-web.1 or v2.32.0-web.1-beta.1'
+        );
     }
     const name = repository.toLowerCase();
     if (
@@ -26,7 +28,8 @@ export function webReleaseMetadata(
     return {
         image: `ghcr.io/${name}`,
         version: match[1],
-        sha_tag: `sha-${sha}`
+        sha_tag: `sha-${sha}`,
+        channel: match[2] ?? 'latest'
     };
 }
 

@@ -12,11 +12,27 @@ describe('Web release metadata', () => {
         expect(release).toEqual({
             image: 'ghcr.io/e-larex/vrcx-docker',
             version: '2.32.0-web.1',
-            sha_tag: `sha-${sha}`
+            sha_tag: `sha-${sha}`,
+            channel: 'latest'
         });
         expect(
             webReleaseMetadata('v2.32.0-web.10', 'owner/repo', sha).version
         ).toBe('2.32.0-web.10');
+    });
+
+    it.each([1, 2, 10])('routes beta.%s to the beta channel', (revision) => {
+        expect(
+            webReleaseMetadata(
+                `v2.32.0-web.1-beta.${revision}`,
+                'E-larex/VRCX-docker',
+                sha
+            )
+        ).toEqual({
+            image: 'ghcr.io/e-larex/vrcx-docker',
+            version: `2.32.0-web.1-beta.${revision}`,
+            sha_tag: `sha-${sha}`,
+            channel: 'beta'
+        });
     });
 
     it.each([
@@ -26,6 +42,12 @@ describe('Web release metadata', () => {
         'v2.32.0-web.0',
         'v2.32.0-web.01',
         'v02.32.0-web.1',
+        'v2.32.0-web.1-beta',
+        'v2.32.0-web.1-beta.0',
+        'v2.32.0-web.1-beta.01',
+        'v2.32.0-web.1-beta.1.1',
+        'v2.32.0-web.1-alpha.1',
+        'v2.32.0-web.1-beta.1\nlatest=true',
         'v2.32.0-web.1\nlatest=true',
         'v2.32.0-web.1/extra'
     ])('rejects invalid or upstream-only tag %s', (tag) => {
