@@ -36,13 +36,15 @@ docker compose logs -f web
 
 ## LAN 内で HTTP を使う
 
-ドメイン、証明書、Nginx なしでも利用できます。Web パスワードを設定したまま、`.env` を変更します。
+ドメイン、証明書、Nginx なしでも利用できます。`.env` を変更します。
 
 ```dotenv
 VRCX_WEB_LAN_MODE=1
 VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
+
+LAN モードに限り、`VRCX_WEB_PASSWORD` が空または未設定なら Web ログインなしで利用できます。パスワードを設定した場合はログインが必要で、12 文字以上でなければなりません。VRChat のログインは別です。固定 Origin モードに戻す前に Web パスワードを設定してください。
 
 `docker compose pull && docker compose up -d` を実行し、`http://サーバーのLAN内IP:8080` にアクセスします。このモードは `VRCX_WEB_ORIGIN` を無視し、Origin と Host の一致を確認します。プライベート IPv4、IPv6 ULA、リンクローカル、ループバック IP、`localhost` に対応します。通常のドメイン名では固定 Origin モードを使用します。HTTP ではクリップボード機能が制限される場合があります。HTTPS に戻す場合は LAN モードを `0` にし、待ち受けアドレスと実際の HTTPS Origin を戻してください。
 

@@ -95,7 +95,13 @@ async function start() {
         };
     }
     document.documentElement.dataset.host = 'web';
-    const session = await request<{ authenticated: boolean }>('/api/session');
+    const session = await request<{
+        authenticated: boolean;
+        passwordRequired: boolean;
+    }>('/api/session');
+    document.documentElement.dataset.websitePasswordRequired = String(
+        session.passwordRequired
+    );
     if (session.authenticated) await import('./main');
     else createRoot(document.getElementById('root')!).render(<Login />);
 }

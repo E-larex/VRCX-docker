@@ -58,7 +58,13 @@ function MenuGroupLabel({ children }: { children: ReactNode }) {
     );
 }
 
-export function AppMenuBar({ showHelp = true }: { showHelp?: boolean }) {
+export function AppMenuBar({
+    showHelp = true,
+    showSessionActions = true
+}: {
+    showHelp?: boolean;
+    showSessionActions?: boolean;
+}) {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [aboutOpen, setAboutOpen] = useState(false);
@@ -137,59 +143,74 @@ export function AppMenuBar({ showHelp = true }: { showHelp?: boolean }) {
                         <span className="vrcx-0-brand">VRCX-0</span>
                     </MenubarTrigger>
                     <MenubarContent align="start">
+                        {showSessionActions && (
+                            <>
+                                <MenubarGroup>
+                                    <MenuItem
+                                        onClick={() =>
+                                            runAfterRestoringNormalWindow(() =>
+                                                navigate('/settings')
+                                            )
+                                        }
+                                    >
+                                        {t('app_menu.settings')}
+                                    </MenuItem>
+                                    {!isWebHost && (
+                                        <MenuItem
+                                            onClick={() =>
+                                                setSystemHostOpen(
+                                                    'updaterOpen',
+                                                    true
+                                                )
+                                            }
+                                        >
+                                            {t('app_menu.check_updates')}
+                                        </MenuItem>
+                                    )}
+                                    <MenuItem
+                                        onClick={() => {
+                                            runRestartApplication();
+                                        }}
+                                    >
+                                        {t('app_menu.restart')}
+                                    </MenuItem>
+                                    {!isWebHost && (
+                                        <MenuItem
+                                            onClick={() => {
+                                                runStartBackgroundMode();
+                                            }}
+                                        >
+                                            {t(
+                                                'app_menu.start_background_mode'
+                                            )}
+                                        </MenuItem>
+                                    )}
+                                </MenubarGroup>
+                                <MenubarSeparator />
+                            </>
+                        )}
                         <MenubarGroup>
-                            <MenuItem
-                                onClick={() =>
-                                    runAfterRestoringNormalWindow(() =>
-                                        navigate('/settings')
-                                    )
-                                }
-                            >
-                                {t('app_menu.settings')}
-                            </MenuItem>
-                            {!isWebHost && (
+                            {showSessionActions && (
                                 <MenuItem
-                                    onClick={() =>
-                                        setSystemHostOpen('updaterOpen', true)
-                                    }
-                                >
-                                    {t('app_menu.check_updates')}
-                                </MenuItem>
-                            )}
-                            <MenuItem
-                                onClick={() => {
-                                    runRestartApplication();
-                                }}
-                            >
-                                {t('app_menu.restart')}
-                            </MenuItem>
-                            {!isWebHost && (
-                                <MenuItem
+                                    variant="destructive"
                                     onClick={() => {
-                                        runStartBackgroundMode();
+                                        runLogout();
                                     }}
                                 >
-                                    {t('app_menu.start_background_mode')}
+                                    {t('app_menu.logout')}
                                 </MenuItem>
                             )}
-                        </MenubarGroup>
-                        <MenubarSeparator />
-                        <MenubarGroup>
-                            <MenuItem
-                                variant="destructive"
-                                onClick={() => {
-                                    runLogout();
-                                }}
-                            >
-                                {t('app_menu.logout')}
-                            </MenuItem>
-                            <MenuItem
-                                onClick={() => {
-                                    exitApplication();
-                                }}
-                            >
-                                {t('app_menu.quit')}
-                            </MenuItem>
+                            {(!isWebHost ||
+                                document.documentElement.dataset
+                                    .websitePasswordRequired !== 'false') && (
+                                <MenuItem
+                                    onClick={() => {
+                                        exitApplication();
+                                    }}
+                                >
+                                    {t('app_menu.quit')}
+                                </MenuItem>
+                            )}
                         </MenubarGroup>
                     </MenubarContent>
                 </MenubarMenu>

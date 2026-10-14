@@ -36,13 +36,15 @@ docker compose logs -f web
 
 ## LAN HTTP 모드
 
-도메인, 인증서, Nginx 없이 사용할 수 있습니다. 웹사이트 비밀번호를 유지하고 `.env`를 변경합니다.
+도메인, 인증서, Nginx 없이 사용할 수 있습니다. `.env`를 변경합니다.
 
 ```dotenv
 VRCX_WEB_LAN_MODE=1
 VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
+
+LAN 모드에서만 `VRCX_WEB_PASSWORD`가 비어 있거나 설정되지 않은 경우 웹사이트 로그인 없이 사용할 수 있습니다. 비밀번호가 설정되어 있으면 여전히 로그인이 필요하며, 비밀번호는 12자 이상이어야 합니다. VRChat 로그인은 별도로 유지됩니다. 고정 Origin 모드로 돌아가기 전에 웹사이트 비밀번호를 설정하세요.
 
 `docker compose pull && docker compose up -d`를 실행하고 `http://서버의LAN_IP:8080`으로 접속합니다. 이 모드는 `VRCX_WEB_ORIGIN`을 무시하고 Origin과 Host의 일치를 확인합니다. 사설 IPv4, IPv6 ULA, 링크 로컬 및 루프백 IP, `localhost`를 지원합니다. 일반 도메인은 고정 Origin 모드를 사용하세요. HTTP에서는 클립보드 기능이 제한될 수 있습니다. HTTPS로 돌아가려면 LAN 모드를 `0`으로 설정하고 바인딩 주소와 실제 HTTPS Origin을 복원합니다.
 

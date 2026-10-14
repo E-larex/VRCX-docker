@@ -2,7 +2,10 @@ use axum::http::HeaderMap;
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
-    sync::Mutex,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    },
     time::{Duration, Instant},
 };
 use vrcx_0_local_server::{generate_token, tokens_match};
@@ -12,12 +15,13 @@ pub const COOKIE: &str = "vrcx_web_session";
 
 pub struct Auth {
     salt: String,
-    password_hash: [u8; 32],
+    password_hash: Option<[u8; 32]>,
     sessions: Mutex<HashMap<String, Instant>>,
     next_attempt: Mutex<Instant>,
     pub origin: String,
     pub secure: bool,
     lan_mode: bool,
+    accepting_requests: AtomicBool,
 }
 
 impl Auth {
@@ -26,7 +30,7 @@ impl Auth {
     }
 
     pub fn with_lan_mode(password: &str, origin: &str, lan_mode: bool) -> Result<Self, String> {
-        if password.len() < 12 {
+        if password.len() < 12 && !(lan_mode && password.is_empty()) {
             return Err("The website password must contain at least 12 characters".into());
         }
         // LAN mode accepts the private IP used by the browser, without a fixed domain.
@@ -43,9 +47,14 @@ impl Auth {
         }
         let salt = generate_token().map_err(|e| e.to_string())?;
         let mut password_hash = [0; 32];
-        argon2::Argon2::default()
-            .hash_password_into(password.as_bytes(), salt.as_bytes(), &mut password_hash)
-            .map_err(|e| e.to_string())?;
+        let password_hash = if password.is_empty() {
+            None
+        } else {
+            argon2::Argon2::default()
+                .hash_password_into(password.as_bytes(), salt.as_bytes(), &mut password_hash)
+                .map_err(|e| e.to_string())?;
+            Some(password_hash)
+        };
         Ok(Self {
             salt,
             password_hash,
@@ -54,6 +63,7 @@ impl Auth {
             origin: parsed.origin().ascii_serialization(),
             secure: parsed.scheme() == "https",
             lan_mode,
+            accepting_requests: AtomicBool::new(true),
         })
     }
 
@@ -71,7 +81,18 @@ impl Auth {
                 })
     }
 
+    pub fn password_required(&self) -> bool {
+        self.password_hash.is_some()
+    }
+
     pub fn login(&self, password: &str) -> Result<String, &'static str> {
+        if !self.accepting_requests.load(Ordering::Acquire) {
+            return Err("Website is shutting down");
+        }
+        let expected = self
+            .password_hash
+            .as_ref()
+            .ok_or("Website password authentication is disabled")?;
         {
             let mut next = self.next_attempt.lock().unwrap();
             if Instant::now() < *next {
@@ -86,7 +107,7 @@ impl Auth {
         argon2::Argon2::default()
             .hash_password_into(password.as_bytes(), self.salt.as_bytes(), &mut hash)
             .map_err(|_| "Invalid password")?;
-        if !tokens_match(&hex_digest(&hash), &hex_digest(&self.password_hash)) {
+        if !tokens_match(&hex_digest(&hash), &hex_digest(expected)) {
             return Err("Invalid password");
         }
         let token = generate_token().map_err(|_| "Unable to create session")?;
@@ -100,7 +121,29 @@ impl Auth {
     }
 
     pub fn authenticated(&self, headers: &HeaderMap) -> bool {
-        cookie(headers).is_some_and(|token| self.valid_token(token))
+        if !self.accepting_requests.load(Ordering::Acquire) {
+            return false;
+        }
+        if self.password_required() {
+            cookie(headers).is_some_and(|token| self.valid_token(token))
+        } else {
+            // Without a cookie gate, validate LAN authority on reads as well as writes.
+            let Some(host) = headers.get("host").and_then(|h| h.to_str().ok()) else {
+                return false;
+            };
+            let Ok(url) = url::Url::parse(&format!("http://{host}")) else {
+                return false;
+            };
+            valid_lan_origin(&url.origin().ascii_serialization(), headers)
+                && headers.get("origin").is_none_or(|origin| {
+                    origin
+                        .to_str()
+                        .is_ok_and(|origin| valid_lan_origin(origin, headers))
+                })
+                && headers
+                    .get("sec-fetch-site")
+                    .is_none_or(|site| site == "same-origin" || site == "none")
+        }
     }
     pub fn valid_token(&self, token: &str) -> bool {
         self.sessions
@@ -117,7 +160,9 @@ impl Auth {
                 .remove(&hex_digest(token.as_bytes()));
         }
     }
-    pub fn revoke_all(&self) {
+    pub fn shutdown(&self) {
+        // Cookie-free SSE connections must terminate during graceful shutdown too.
+        self.accepting_requests.store(false, Ordering::Release);
         self.sessions.lock().unwrap().clear();
     }
     pub fn cookie_header(&self, token: &str) -> String {
@@ -179,6 +224,87 @@ fn hex_digest(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn only_lan_mode_allows_an_empty_password() {
+        assert!(Auth::new("", "http://localhost:8080").is_err());
+        assert!(Auth::new("", "https://vrcx.example.com").is_err());
+        assert!(Auth::with_lan_mode("short", "", true).is_err());
+        let auth = Auth::with_lan_mode("", "", true).unwrap();
+        assert!(!auth.password_required());
+        assert!(!auth.authenticated(&HeaderMap::new()));
+        assert!(auth.login("").is_err());
+        assert!(auth.sessions.lock().unwrap().is_empty());
+        assert!(Auth::with_lan_mode("correct-test-password", "", true)
+            .unwrap()
+            .password_required());
+    }
+
+    #[test]
+    fn passwordless_lan_reads_need_a_local_host_and_matching_origin() {
+        let auth = Auth::with_lan_mode("", "https://unused.example", true).unwrap();
+        for host in [
+            "localhost:8080",
+            "127.0.0.1:80",
+            "192.168.1.10:80",
+            "10.0.0.2:8080",
+            "172.16.0.2",
+            "169.254.0.2",
+            "[fd00::1]:8080",
+            "[fe80::1]:8080",
+            "[::1]:80",
+        ] {
+            let mut headers = HeaderMap::new();
+            headers.insert("host", host.parse().unwrap());
+            assert!(auth.authenticated(&headers), "{host}");
+            let origin = url::Url::parse(&format!("http://{host}"))
+                .unwrap()
+                .origin()
+                .ascii_serialization();
+            headers.insert("origin", origin.parse().unwrap());
+            headers.insert("sec-fetch-site", "same-origin".parse().unwrap());
+            assert!(auth.authenticated(&headers), "{host}");
+            headers.insert("x-vrcx-web", "1".parse().unwrap());
+            assert!(auth.validate_request(&headers), "{host}");
+            auth.logout(&headers);
+            assert!(auth.authenticated(&headers));
+            headers.insert("origin", "http://192.168.1.20:8080".parse().unwrap());
+            assert!(!auth.authenticated(&headers));
+            headers.remove("origin");
+            headers.insert("sec-fetch-site", "cross-site".parse().unwrap());
+            assert!(!auth.authenticated(&headers));
+        }
+        for host in [
+            "8.8.8.8:8080",
+            "[2001:4860::8888]:8080",
+            "attacker.example:8080",
+            "localhost.attacker.example",
+            "localhost/path",
+            "user@localhost",
+            "localhost:8080#fragment",
+        ] {
+            let mut headers = HeaderMap::new();
+            headers.insert("host", host.parse().unwrap());
+            assert!(!auth.authenticated(&headers), "{host}");
+        }
+    }
+
+    #[test]
+    fn shutdown_revokes_password_and_passwordless_access() {
+        for password in ["", "correct-test-password"] {
+            let auth = Auth::with_lan_mode(password, "", true).unwrap();
+            let mut headers = HeaderMap::new();
+            headers.insert("host", "localhost:8080".parse().unwrap());
+            if auth.password_required() {
+                let token = auth.login(password).unwrap();
+                headers.insert("cookie", format!("{COOKIE}={token}").parse().unwrap());
+            }
+            assert!(auth.authenticated(&headers));
+            auth.shutdown();
+            assert!(!auth.authenticated(&headers));
+            assert!(auth.login(password).is_err());
+        }
+    }
+
     #[test]
     fn session_is_required_and_logout_revokes_it() {
         let auth = Auth::new("correct-test-password", "https://vrcx.example.com").unwrap();

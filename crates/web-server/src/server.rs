@@ -34,8 +34,10 @@ pub fn error(status: StatusCode, message: impl ToString) -> ApiError {
 pub fn require_auth(state: &WebState, headers: &HeaderMap) -> Result<(), ApiError> {
     if state.auth.authenticated(headers) {
         Ok(())
-    } else {
+    } else if state.auth.password_required() {
         Err(error(StatusCode::UNAUTHORIZED, "Website login required"))
+    } else {
+        Err(error(StatusCode::FORBIDDEN, "Invalid LAN request"))
     }
 }
 pub fn require_mutation(state: &WebState, headers: &HeaderMap) -> Result<(), ApiError> {
@@ -71,9 +73,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let password = if let Ok(file) = std::env::var("VRCX_WEB_PASSWORD_FILE") {
         std::fs::read_to_string(file)?
     } else {
-        std::env::var("VRCX_WEB_PASSWORD").map_err(|_| {
-            "Set VRCX_WEB_PASSWORD_FILE or VRCX_WEB_PASSWORD for website authentication"
-        })?
+        match std::env::var("VRCX_WEB_PASSWORD") {
+            Ok(password) => password,
+            Err(std::env::VarError::NotPresent) => String::new(),
+            Err(error) => return Err(error.into()),
+        }
     };
     let auth = Arc::new(Auth::with_lan_mode(
         password.trim_end_matches(['\r', '\n']),
@@ -139,7 +143,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         #[cfg(not(unix))]
         tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = crate::RESTART.notified() => {} }
-        auth.revoke_all();
+        auth.shutdown();
         // Flush the shared runtime before waiting for HTTP clients to disconnect.
         // An idle browser connection must not defer saving persistent state.
         let result = tokio::task::spawn_blocking(move || {
@@ -238,8 +242,17 @@ pub fn router(state: WebState) -> Router {
         .with_state(state)
 }
 
-async fn session(State(state): State<WebState>, headers: HeaderMap) -> Json<Value> {
-    Json(json!({"authenticated":state.auth.authenticated(&headers)}))
+async fn session(
+    State(state): State<WebState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    if !state.auth.password_required() {
+        require_auth(&state, &headers)?;
+    }
+    Ok(Json(json!({
+        "authenticated": state.auth.authenticated(&headers),
+        "passwordRequired": state.auth.password_required()
+    })))
 }
 #[derive(Deserialize)]
 struct Login {
@@ -252,6 +265,10 @@ async fn login(
 ) -> Result<Response, ApiError> {
     if !state.auth.validate_request(&headers) {
         return Err(error(StatusCode::FORBIDDEN, "Invalid request origin"));
+    }
+    if !state.auth.password_required() {
+        require_auth(&state, &headers)?;
+        return Ok(Json(json!({"authenticated":true})).into_response());
     }
     let auth = state.auth.clone();
     let token = tokio::task::spawn_blocking(move || auth.login(&input.password))
@@ -269,7 +286,7 @@ async fn logout(State(state): State<WebState>, headers: HeaderMap) -> Result<Res
     state.auth.logout(&headers);
     Ok((
         [(header::SET_COOKIE, state.auth.cookie_header(""))],
-        Json(json!({"authenticated":false})),
+        Json(json!({"authenticated":state.auth.authenticated(&headers)})),
     )
         .into_response())
 }
@@ -375,13 +392,12 @@ fn mask_capabilities(value: &mut Value) {
 
 async fn events(State(state): State<WebState>, headers: HeaderMap) -> Result<Response, ApiError> {
     require_auth(&state, &headers)?;
-    let token = crate::auth::cookie(&headers).unwrap().to_owned();
     let mut source = state.events.subscribe();
     let (sender, receiver) = mpsc::channel(32);
     tokio::spawn(async move {
         let mut tick = tokio::time::interval(Duration::from_secs(15));
         loop {
-            if !state.auth.valid_token(&token) {
+            if !state.auth.authenticated(&headers) {
                 break;
             }
             let event = tokio::select! {
@@ -393,6 +409,9 @@ async fn events(State(state): State<WebState>, headers: HeaderMap) -> Result<Res
                     Err(_) => break,
                 }
             };
+            if !state.auth.authenticated(&headers) {
+                break;
+            }
             if !matches!(
                 tokio::time::timeout(
                     Duration::from_secs(15),
@@ -578,6 +597,204 @@ mod tests {
             .unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
         app.runtime_host().stop_for_application_exit("test", || {});
+        drop(router);
+        drop(app);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+    #[tokio::test(flavor = "multi_thread")]
+    async fn passwordless_lan_supports_commands_files_and_events_without_cookies() {
+        let directory = std::env::temp_dir().join(format!(
+            "vrcx-passwordless-{}",
+            vrcx_0_local_server::generate_token().unwrap()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        let app = Arc::new(
+            AppState::new(
+                vrcx_0_platform::app_paths::AppDataDirResolution {
+                    current_dir: directory.clone(),
+                    default_dir: directory.clone(),
+                    persisted_dir: None,
+                    cli_dir: Some(directory.clone()),
+                    source: vrcx_0_platform::app_paths::AppDataDirSource::Cli,
+                },
+                None,
+                Arc::new(vrcx_0_application_core::NoopUpdaterPort),
+                Arc::new(crate::Executor),
+            )
+            .unwrap(),
+        );
+        let (events, _) = broadcast::channel(16);
+        let files = Arc::new(crate::files::Files::new(&directory).unwrap());
+        let file = files.allocate("synthetic.txt").unwrap();
+        std::fs::write(&file, "synthetic file contents").unwrap();
+        let auth = Arc::new(Auth::with_lan_mode("", "", true).unwrap());
+        let router = router(WebState {
+            app: app.clone(),
+            auth: auth.clone(),
+            events: events.clone(),
+            files,
+        });
+        let request = |method: &str, uri: &str, body: Value| {
+            Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("host", "localhost:8080")
+                .header("origin", "http://localhost:8080")
+                .header("x-vrcx-web", "1")
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap()
+        };
+        let response = router
+            .clone()
+            .oneshot(request("GET", "/api/session", Value::Null))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(!response.headers().contains_key(header::SET_COOKIE));
+        let session: Value =
+            serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        assert_eq!(
+            session,
+            json!({"authenticated":true,"passwordRequired":false})
+        );
+        for endpoint in ["/api/login", "/api/logout"] {
+            let response = router
+                .clone()
+                .oneshot(request("POST", endpoint, json!({"password":""})))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let result: Value =
+                serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
+                    .unwrap();
+            assert_eq!(result["authenticated"], true);
+        }
+        let response = router
+            .clone()
+            .oneshot(request(
+                "POST",
+                "/api/invoke/storage__set",
+                json!({"key":"lan-test","value":"saved"}),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let response = router
+            .clone()
+            .oneshot(request("POST", "/api/invoke/storage__get_all", json!({})))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let storage: Value =
+            serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        assert_eq!(storage["lan-test"], "saved");
+        let query: String = url::form_urlencoded::Serializer::new(String::new())
+            .append_pair("path", file.to_str().unwrap())
+            .finish();
+        let response = router
+            .clone()
+            .oneshot(request(
+                "GET",
+                &format!("/api/files/read?{query}"),
+                Value::Null,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response
+                .into_body()
+                .collect()
+                .await
+                .unwrap()
+                .to_bytes()
+                .as_ref(),
+            b"synthetic file contents"
+        );
+        let response = router
+            .clone()
+            .oneshot(request(
+                "GET",
+                "/api/files/read?path=/etc/passwd",
+                Value::Null,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let response = router
+            .clone()
+            .oneshot(request(
+                "POST",
+                "/api/files/folders",
+                json!({"parent":"","name":"backups"}),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let response = router
+            .clone()
+            .oneshot(request("GET", "/api/events", Value::Null))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut stream = response.into_body();
+        events
+            .send(("lan-test".into(), json!({"value":1})))
+            .unwrap();
+        let frame = tokio::time::timeout(Duration::from_secs(2), stream.frame())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let data = String::from_utf8(frame.into_data().unwrap().to_vec()).unwrap();
+        assert!(data.contains("lan-test"), "{data}");
+        drop(stream);
+        for (method, endpoint, payload) in [
+            ("GET", "/api/session", Value::Null),
+            ("GET", "/api/events", Value::Null),
+            ("GET", "/api/files/folders?path=", Value::Null),
+            ("POST", "/api/invoke/storage__get_all", json!({})),
+        ] {
+            for (name, value) in [
+                ("host", "attacker.example:8080"),
+                ("origin", "http://localhost:9000"),
+                ("sec-fetch-site", "cross-site"),
+            ] {
+                let mut rejected = request(method, endpoint, payload.clone());
+                rejected.headers_mut().insert(name, value.parse().unwrap());
+                assert_eq!(
+                    router.clone().oneshot(rejected).await.unwrap().status(),
+                    StatusCode::FORBIDDEN,
+                    "{endpoint}: {name}"
+                );
+            }
+        }
+        for missing in ["origin", "x-vrcx-web"] {
+            let mut rejected = request("POST", "/api/invoke/storage__get_all", json!({}));
+            rejected.headers_mut().remove(missing);
+            assert_eq!(
+                router.clone().oneshot(rejected).await.unwrap().status(),
+                StatusCode::FORBIDDEN
+            );
+        }
+        let response = router
+            .clone()
+            .oneshot(request("GET", "/api/events", Value::Null))
+            .await
+            .unwrap();
+        let mut stream = response.into_body();
+        auth.shutdown();
+        let _ = events.send(("shutdown-check".into(), Value::Null));
+        assert!(tokio::time::timeout(Duration::from_secs(2), stream.frame())
+            .await
+            .unwrap()
+            .is_none());
+        drop(stream);
+        app.runtime_host()
+            .stop_for_application_exit("passwordless test", || {});
         drop(router);
         drop(app);
         std::fs::remove_dir_all(directory).unwrap();

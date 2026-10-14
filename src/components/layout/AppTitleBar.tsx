@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { markAppTitleBarWindowAction } from '@/lib/overlayTitlebar';
 import { cn } from '@/lib/utils';
+import { isWebHost } from '@/platform/host';
 import {
     closeWindow,
     minimizeWindow,
@@ -80,6 +81,10 @@ export function AppTitleBar() {
         themeToggleAction
     } = useTitleBarActions('px-1');
 
+    const websiteLogoutAvailable =
+        isWebHost &&
+        document.documentElement.dataset.websitePasswordRequired !== 'false';
+    const showSessionActions = isSessionReady && !privacyLockCovering;
     const MaximizeIcon = isMaximized ? CopyIcon : SquareIcon;
     const maximizeLabel = isMaximized
         ? t('app_menu.label.restore_window')
@@ -99,7 +104,7 @@ export function AppTitleBar() {
                     data-tauri-drag-region
                     className="flex h-full min-w-0 flex-1 items-center gap-2 pr-3"
                 >
-                    {isSessionReady && !privacyLockCovering ? (
+                    {showSessionActions || websiteLogoutAvailable ? (
                         <div
                             role="presentation"
                             data-titlebar-interactive="true"
@@ -111,7 +116,12 @@ export function AppTitleBar() {
                                 event.stopPropagation();
                             }}
                         >
-                            <AppMenuBar showHelp={!sidebarWindowMode} />
+                            <AppMenuBar
+                                showHelp={
+                                    showSessionActions && !sidebarWindowMode
+                                }
+                                showSessionActions={showSessionActions}
+                            />
                         </div>
                     ) : null}
                     <div
@@ -138,21 +148,7 @@ export function AppTitleBar() {
                 ) : (
                     actions
                 )}
-                {import.meta.env.MODE === 'web' ? (
-                    <button
-                        type="button"
-                        className="hover:bg-accent h-full shrink-0 px-3 text-xs"
-                        onClick={() => {
-                            void import('@/platform/web/http').then(
-                                ({ logoutWebsite }) => logoutWebsite()
-                            );
-                        }}
-                    >
-                        {navigator.language.startsWith('zh')
-                            ? '退出网页'
-                            : 'Sign out of website'}
-                    </button>
-                ) : (
+                {import.meta.env.MODE !== 'web' && (
                     <div className="flex h-full shrink-0 items-center">
                         <TitleBarWindowButton
                             label={t('app_menu.label.minimize_window')}

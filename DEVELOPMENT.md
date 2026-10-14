@@ -20,7 +20,7 @@ VRCX_WEB_ORIGIN=http://localhost:8080 \
   target/debug/vrcx-0-web --data-dir ./data
 ```
 
-For frontend hot reload, run `npm run dev:web` on port 9000. API requests are proxied to `127.0.0.1:8080`; set the backend origin to `http://localhost:9000`. A standalone binary needs a process manager or manual restart after restore/migration exits.
+For frontend hot reload, run `npm run dev:web` on port 9000. The API proxy preserves the browser Host so LAN Origin validation also works during development. API requests are proxied to `127.0.0.1:8080`; set the backend origin to `http://localhost:9000`. A standalone binary needs a process manager or manual restart after restore/migration exits.
 
 When merging an upstream tag, check the command selection in `crates/web-server/build.rs`, newly added desktop UI entries, and `web-host` guards. Build desktop and web packages separately to prevent Cargo feature unification from enabling `web-host` on the desktop build.
 
@@ -35,6 +35,8 @@ docker compose -f compose.example.yaml -f compose.build.yaml build
 Automated checks cover website authentication, origin validation, original database commands, desktop capability restrictions, and file access boundaries. Real VRChat account login, two-factor verification, long-running events, and third-party Webhook delivery still require acceptance testing with actual accounts and endpoints.
 
 After building the Web frontend and debug server, run `node scripts/check-web-folders.mjs` to check folder naming, uploads, selection, and persistence across a server restart in Chromium. The script starts isolated local services with temporary storage and synthetic website credentials, then removes its test data. Playwright and Chromium must be installed; `VRCX_TEST_PLAYWRIGHT_MODULE` can specify an external Playwright module and `VRCX_TEST_CHROMIUM` can specify the browser executable.
+
+Run `node scripts/check-web-auth.mjs` with the same Playwright setup to check passwordless LAN access, password-protected login, SSE, and the top-left website logout action using synthetic credentials. After building an image, `bash scripts/check-web-lan-image.sh IMAGE` checks both LAN authentication modes, rejects fixed-origin startup without a password, and verifies persistence across container recreation using an isolated volume.
 
 ## Continuous integration
 

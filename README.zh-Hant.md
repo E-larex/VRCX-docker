@@ -36,13 +36,15 @@ docker compose logs -f web
 
 ## 區域網路 HTTP 模式
 
-不需要網域、憑證或 Nginx。保留網站密碼，修改 `.env`：
+不需要網域、憑證或 Nginx。修改 `.env`：
 
 ```dotenv
 VRCX_WEB_LAN_MODE=1
 VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
+
+僅在 LAN 模式下，`VRCX_WEB_PASSWORD` 留空或未設定時可免網站登入；若已設定密碼，仍需登入且密碼至少 12 個字元。VRChat 登入仍獨立進行。切回固定 Origin 模式前須設定網站密碼。
 
 再次執行 `docker compose pull && docker compose up -d`，使用 `http://伺服器的區域網路IP:8080` 存取。此模式忽略 `VRCX_WEB_ORIGIN`，驗證 Origin 與 Host 相符，支援私有 IPv4、IPv6 ULA、鏈路本地、回環 IP 及 `localhost`。一般網域使用固定 Origin 模式。HTTP 下瀏覽器可能限制剪貼簿功能。回復 HTTPS 部署時，將 LAN 模式設為 `0`，還原監聽位址及實際 HTTPS Origin。
 

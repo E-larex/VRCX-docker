@@ -43,20 +43,22 @@ VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
 
-然后运行 `docker compose pull` 和 `docker compose up -d`，通过 `http://服务器的局域网IP:8080` 访问，例如 `http://192.168.1.10:8080`。该模式忽略 `VRCX_WEB_ORIGIN`，仍然要求网站管理密码，并校验请求 Origin 与 Host 一致；支持私有 IPv4、IPv6 ULA、链路本地及回环 IP，也支持 `localhost`。普通域名访问仍使用原来的固定 Origin 模式。
+然后运行 `docker compose pull` 和 `docker compose up -d`，通过 `http://服务器的局域网IP:8080` 访问，例如 `http://192.168.1.10:8080`。该模式忽略 `VRCX_WEB_ORIGIN`，校验请求 Origin 与 Host 一致；支持私有 IPv4、IPv6 ULA、链路本地及回环 IP，也支持 `localhost`。普通域名访问仍使用原来的固定 Origin 模式。
 
-`VRCX_WEB_LAN_MODE` 默认 `0`，HTTPS 域名及 Nginx 部署方式保持不变。切换回原模式时设为 `0`，恢复 `VRCX_WEB_LISTEN=127.0.0.1` 和实际 `VRCX_WEB_ORIGIN`。HTTP 局域网模式下，浏览器可能限制剪贴板等需要安全上下文的功能。
+如需免网站登录，将 `VRCX_WEB_PASSWORD` 留空或不设置。只有 `VRCX_WEB_LAN_MODE=1` 允许无密码启动；设置了密码仍需登录，且密码至少 12 个字符。免密码模式下，能够访问受支持局域网地址的用户可直接使用共享应用；VRChat 账号登录仍独立进行。独立运行服务器时，`VRCX_WEB_PASSWORD_FILE` 的内容优先于密码环境变量。
+
+`VRCX_WEB_LAN_MODE` 默认 `0`，HTTPS 域名及 Nginx 部署方式保持不变。切换回原模式时需设置网站密码，将 LAN 模式设为 `0`，恢复 `VRCX_WEB_LISTEN=127.0.0.1` 和实际 `VRCX_WEB_ORIGIN`。HTTP 局域网模式下，浏览器可能限制剪贴板等需要安全上下文的功能。
 
 ## 后台运行和功能范围
 
-- 关闭浏览器、网络断开、点击右上角“退出网页”均不会注销 VRChat 或停止记录。原版账号菜单中的 VRChat 注销仍会终止 VRChat 会话。
+- 关闭浏览器、网络断开、点击左上角菜单中的“退出 VRCX-0”均不会注销 VRChat 或停止记录。原版账号菜单中的 VRChat 注销仍会终止 VRChat 会话。
 - 好友状态、社交记录、收藏、世界、头像、群组、邀请、通知、筛选、备注、标签、统计等继续调用上游的业务服务和数据库。界面仍来自同一套源码。
 - 原有 Webhook、远程记录器、翻译和 AI 等服务器端集成继续使用原设置。Webhook 由服务器发送，无需保持浏览器打开。依赖第三方服务的功能仍需配置相应服务。
 - 不启动本机游戏进程监测、游戏日志采集、截图监测或 VR Overlay；网页隐藏相关入口以及托盘、窗口、自启动、桌面通知、Discord RPC 等桌面设置。
 - 不新增历史记录过期清理。已有数据维护、备份保留数量等独立设置仍遵循原版逻辑。
 - 采集频率保持原版：实时状态以 VRChat 事件流为主，好友/收藏基线通常每小时刷新，当前用户信息每 5 分钟刷新。**资料简介扫描默认关闭**；开启后每 3 秒处理一个候选用户，同一用户至少间隔 12 小时。实际请求仍受登录状态、原版调度和限流策略约束。
 
-网站会话最长 7 天，服务重启后需要重新登录网站；这不会删除 VRChat 的持久会话。网站密码可修改 `.env` 后通过 `docker compose up -d --force-recreate web` 生效。
+设置网站密码时，网站会话最长 7 天，服务重启后需要重新登录网站；这不会删除 VRChat 的持久会话。网站密码可修改 `.env` 后通过 `docker compose up -d --force-recreate web` 生效。左上角“退出 VRCX-0”仅退出当前网站会话，免密码模式下隐藏；右上角不再单独显示退出按钮。
 
 ## 导入、导出和备份
 

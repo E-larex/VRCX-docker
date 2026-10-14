@@ -48,7 +48,7 @@ For local testing on the server itself, `VRCX_WEB_ORIGIN=http://localhost:8080` 
 
 ### LAN access over HTTP
 
-A domain, certificate, and Nginx are not required for LAN mode. Keep the website password configured and set:
+A domain, certificate, and Nginx are not required for LAN mode. Set:
 
 ```dotenv
 VRCX_WEB_LAN_MODE=1
@@ -58,9 +58,11 @@ VRCX_WEB_PORT=8080
 
 Run `docker compose pull` and `docker compose up -d`, then open `http://192.168.1.10:8080`, replacing the IP with your server's LAN address.
 
+To allow direct access without website login, leave `VRCX_WEB_PASSWORD` empty or unset. This is permitted only when `VRCX_WEB_LAN_MODE=1`; a configured password still requires login and must contain at least 12 characters. Anyone who can reach the supported LAN address can use the shared application in passwordless mode. VRChat account login remains separate. For standalone servers, `VRCX_WEB_PASSWORD_FILE` takes precedence over the password environment variable.
+
 LAN mode ignores `VRCX_WEB_ORIGIN` and checks that the request Origin matches Host. Private IPv4, IPv6 ULA, link-local and loopback IPs, and `localhost` are supported. Ordinary domain names use the fixed-origin mode. Browser clipboard features may be restricted over HTTP.
 
-To return to the default deployment, set `VRCX_WEB_LAN_MODE=0`, `VRCX_WEB_LISTEN=127.0.0.1`, and your actual HTTPS origin.
+To return to the default deployment, configure a website password, set `VRCX_WEB_LAN_MODE=0`, `VRCX_WEB_LISTEN=127.0.0.1`, and your actual HTTPS origin.
 
 ## Data and backups
 
@@ -78,12 +80,12 @@ For a full instance backup, run `docker compose stop web`, copy the entire `./da
 
 - Keep upstream server-side features: friend status, social history, favorites, worlds, avatars, groups, invitations, notifications, filters, notes, tags, and statistics.
 - Reuse the original interface and services for Webhooks, remote logger integration, translation, and optional AI providers. Third-party integrations require their own configuration. Webhooks are sent by the server while the browser is closed.
-- Closing a browser, losing the connection, or choosing “Sign out of website” keeps VRChat and collection running. Explicitly logging out of VRChat ends the VRChat session.
+- Closing a browser, losing the connection, or choosing “Quit VRCX-0” in the top-left menu keeps VRChat and collection running. Explicitly logging out of VRChat ends the VRChat session.
 - Local game process monitoring, game log collection, screenshot monitoring, and VR Overlay are disabled. Desktop-specific controls such as the tray, window controls, autostart, desktop notifications, and Discord RPC are hidden.
 - No new age-based history deletion is added. Existing maintenance and backup retention settings still follow upstream behavior.
 - Original polling defaults are retained: realtime status primarily uses VRChat events; friend/favorite baselines normally refresh hourly and the current user every 5 minutes. **Bio scanning is off by default**. When enabled, it processes one candidate every 3 seconds, with at least 12 hours between scans of the same user. Authentication, upstream scheduling, and rate limits still apply.
 
-Website sessions last up to 7 days and are cleared on server restart; persisted VRChat sessions are separate. To change the website password, edit `.env` and run `docker compose up -d --force-recreate web`. The website password screen follows the system light/dark theme.
+With a website password configured, website sessions last up to 7 days and are cleared on server restart; persisted VRChat sessions are separate. To change the website password, edit `.env` and run `docker compose up -d --force-recreate web`. The website password screen follows the system light/dark theme. The top-left “Quit VRCX-0” item signs out only the current website session; it is hidden in passwordless mode. There is no separate website logout button in the title bar.
 
 ## Updating and stopping
 

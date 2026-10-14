@@ -32,7 +32,7 @@ services:
         environment:
             VRCX_WEB_ORIGIN: ${VRCX_WEB_ORIGIN:-}
             VRCX_WEB_LAN_MODE: ${VRCX_WEB_LAN_MODE:-0}
-            VRCX_WEB_PASSWORD: ${VRCX_WEB_PASSWORD:?Set the website administrator password}
+            VRCX_WEB_PASSWORD: ${VRCX_WEB_PASSWORD:-}
             TZ: ${TZ:-Asia/Shanghai}
         volumes:
             - ./data:/data

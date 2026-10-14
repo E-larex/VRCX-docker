@@ -36,13 +36,15 @@ Connectez-vous d’abord au site, puis à VRChat dans l’interface d’origine,
 
 ## Accès HTTP sur le réseau local
 
-Ce mode ne nécessite ni domaine, ni certificat, ni Nginx. Conservez le mot de passe Web et modifiez `.env` :
+Ce mode ne nécessite ni domaine, ni certificat, ni Nginx. Modifiez `.env` :
 
 ```dotenv
 VRCX_WEB_LAN_MODE=1
 VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
+
+Uniquement en mode LAN, laisser `VRCX_WEB_PASSWORD` vide ou non défini permet un accès sans connexion au site. Si un mot de passe est défini, la connexion reste obligatoire et le mot de passe doit comporter au moins 12 caractères. La connexion VRChat reste distincte. Configurez un mot de passe avant de revenir au mode à origine fixe.
 
 Exécutez `docker compose pull && docker compose up -d`, puis ouvrez `http://192.168.1.10:8080` en remplaçant l’adresse IP par celle du serveur. Ce mode ignore `VRCX_WEB_ORIGIN` et vérifie la correspondance entre Origin et Host. Il accepte les IPv4 privées, IPv6 ULA, adresses locales au lien et de bouclage, ainsi que `localhost`. Les noms de domaine ordinaires utilisent le mode à origine fixe. Le navigateur peut limiter le presse-papiers en HTTP. Pour revenir à HTTPS, réglez le mode LAN sur `0` et restaurez l’adresse d’écoute et votre origine HTTPS.
 
