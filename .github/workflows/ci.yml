@@ -2,14 +2,10 @@ name: CI
 
 on:
     push:
-        branches:
-            - master
+        branches: [master]
     pull_request:
-        types:
-            - opened
-            - synchronize
-            - reopened
-            - ready_for_review
+        branches: [master]
+        types: [opened, synchronize, reopened, ready_for_review]
     workflow_dispatch:
 
 concurrency:
@@ -22,13 +18,13 @@ permissions:
 jobs:
     changes:
         name: Detect Changes
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         timeout-minutes: 5
-        if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+        permissions:
+            contents: read
+            pull-requests: read
         outputs:
-            frontend: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.frontend }}
-            rust: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.rust }}
-            tauri_bindings: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.tauri_bindings }}
+            web: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.web }}
         steps:
             - uses: actions/checkout@v7
             - uses: dorny/paths-filter@v4
@@ -36,363 +32,132 @@ jobs:
               id: filter
               with:
                   filters: |
-                      frontend:
-                        - '.github/actions/setup-node/**'
+                      web:
+                        - '.cargo/**'
+                        - '.dockerignore'
+                        - '.env.example'
+                        - '.github/actions/**'
                         - '.github/workflows/ci.yml'
+                        - '.github/workflows/release.yml'
+                        - '.npmrc'
                         - '.oxfmtrc.json'
                         - '.oxlintrc.json'
-                        - 'crates/logger/compose.yaml'
-                        - 'crates/logger/install.sh'
+                        - 'Cargo.toml'
+                        - 'Cargo.lock'
+                        - 'Dockerfile.web'
+                        - 'LICENSE'
+                        - 'LICENSES/**'
+                        - 'NOTICE'
+                        - 'compose*.yaml'
+                        - 'crates/**'
+                        - 'deploy/**'
                         - 'index.html'
                         - 'package.json'
                         - 'package-lock.json'
                         - 'public/**'
                         - 'scripts/**'
                         - 'src/**'
+                        - 'src-tauri/**'
                         - 'tsconfig*.json'
                         - 'vite.config.*'
                         - 'vitest.config.*'
-                      rust:
-                        - '.cargo/**'
-                        - '.github/actions/setup-linux-tauri/**'
-                        - '.github/actions/setup-rust/**'
-                        - '.github/workflows/ci.yml'
-                        - 'Cargo.lock'
-                        - 'Cargo.toml'
-                        - 'crates/**'
-                        - 'deny.toml'
-                        - 'package.json'
-                        - 'src-tauri/**'
-                      tauri_bindings:
-                        - '.cargo/**'
-                        - '.github/actions/setup-linux-tauri/**'
-                        - '.github/actions/setup-node/**'
-                        - '.github/actions/setup-rust/**'
-                        - '.github/workflows/ci.yml'
-                        - 'Cargo.lock'
-                        - 'Cargo.toml'
-                        - 'crates/**'
-                        - 'package.json'
-                        - 'package-lock.json'
-                        - 'src/platform/tauri/**'
-                        - 'src-tauri/**'
 
-    frontend-checks:
-        name: Frontend Checks
-        runs-on: ubuntu-latest
-        timeout-minutes: 15
-        needs: changes
-        if: needs.changes.outputs.frontend == 'true'
+    frontend:
+        name: Web Frontend Checks
+        runs-on: ubuntu-24.04
+        timeout-minutes: 20
         steps:
             - uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
             - uses: ./.github/actions/setup-node
+              with:
+                  node-version: 26.x
             - run: npm run format:check
             - run: npm run lint
             - run: npm run typecheck
+            - run: npm test
 
-    frontend-build:
-        name: Frontend Build
-        runs-on: ubuntu-latest
-        timeout-minutes: 15
+    rust:
+        name: Web Rust Checks
         needs: changes
-        if: needs.changes.outputs.frontend == 'true'
-        steps:
-            - uses: actions/checkout@v7
-            - uses: ./.github/actions/setup-node
-            - run: npm run build
-
-    frontend-test:
-        name: Frontend Tests
-        runs-on: ubuntu-latest
-        timeout-minutes: 20
-        needs: changes
-        if: needs.changes.outputs.frontend == 'true' || (github.ref == 'refs/heads/master' && github.event_name == 'push')
-        steps:
-            - uses: actions/checkout@v7
-            - uses: ./.github/actions/setup-node
-            - run: npm run test -- --coverage
-            - uses: actions/upload-artifact@v7
-              with:
-                  name: ts-coverage-summary
-                  path: coverage/coverage-summary.json
-                  if-no-files-found: error
-                  retention-days: 7
-
-    rust-checks:
-        name: Rust Checks
-        runs-on: ubuntu-24.04
-        timeout-minutes: 45
-        needs: changes
-        if: needs.changes.outputs.rust == 'true'
-        steps:
-            - uses: actions/checkout@v7
-            - uses: ./.github/actions/setup-linux-tauri
-              with:
-                  mode: ci
-            - uses: actions/setup-node@v6
-              with:
-                  node-version: 24.x
-            - uses: ./.github/actions/setup-rust
-              with:
-                  cache-key: ci-linux-clippy
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
-            - run: npm run rust:fmt:check
-            - run: mkdir -p dist && printf '<!doctype html><html><body></body></html>' > dist/index.html
-            - run: npm run rust:clippy:ci
-            - uses: taiki-e/install-action@cargo-deny
-            - run: npm run rust:deny
-
-    logger-musl:
-        name: Logger Static Build
-        runs-on: ubuntu-24.04
-        timeout-minutes: 30
-        needs: changes
-        if: needs.changes.outputs.rust == 'true'
-        steps:
-            - uses: actions/checkout@v7
-            - uses: ./.github/actions/setup-rust
-              with:
-                  target: x86_64-unknown-linux-musl
-                  cache-key: ci-logger-musl
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
-            - run: sudo apt-get update && sudo apt-get install -y musl-tools
-            - run: cargo build --locked -p vrcx-0-logger --target x86_64-unknown-linux-musl
-
-    tauri-build:
-        name: Tauri Build (${{ matrix.label }})
-        runs-on: ${{ matrix.os }}
-        timeout-minutes: 60
-        needs: changes
-        if: needs.changes.outputs.rust == 'true'
-        defaults:
-            run:
-                shell: bash
-        strategy:
-            fail-fast: false
-            matrix:
-                include:
-                    - label: Windows
-                      os: windows-latest
-                      rust_target: ''
-                      cache_key: ci-windows-x86_64
-                    - label: Linux
-                      os: ubuntu-24.04
-                      rust_target: ''
-                      cache_key: ci-linux-x86_64
-                    - label: macOS Apple Silicon
-                      os: macos-latest
-                      rust_target: aarch64-apple-darwin
-                      cache_key: ci-macos-aarch64
-                    - label: macOS Intel
-                      os: macos-latest
-                      rust_target: x86_64-apple-darwin
-                      cache_key: ci-macos-x86_64
-        steps:
-            - uses: actions/checkout@v7
-            - uses: ./.github/actions/setup-linux-tauri
-              if: runner.os == 'Linux'
-              with:
-                  mode: ci
-            - uses: ./.github/actions/setup-rust
-              with:
-                  target: ${{ matrix.rust_target }}
-                  cache-key: ${{ matrix.cache_key }}
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
-            - run: mkdir -p dist && printf '<!doctype html><html><body></body></html>' > dist/index.html
-            - name: Build Tauri crate
-              env:
-                  RUST_TARGET: ${{ matrix.rust_target }}
-              run: |
-                  if [[ -n "$RUST_TARGET" ]]; then
-                      cargo build --manifest-path src-tauri/Cargo.toml --locked --target "$RUST_TARGET"
-                  else
-                      cargo build --manifest-path src-tauri/Cargo.toml --locked
-                  fi
-            - name: Test backend architecture
-              if: runner.os == 'Linux'
-              run: cargo test --manifest-path src-tauri/Cargo.toml --locked --test backend_architecture
-
-    rust-coverage:
-        name: Rust Coverage
+        if: needs.changes.outputs.web == 'true'
         runs-on: ubuntu-24.04
         timeout-minutes: 60
-        needs: changes
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         steps:
             - uses: actions/checkout@v7
-            - uses: ./.github/actions/setup-linux-tauri
               with:
-                  mode: ci
-            - uses: ./.github/actions/setup-rust
+                  persist-credentials: false
+            - name: Install Web build dependencies
+              run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev cmake clang
+            - uses: dtolnay/rust-toolchain@1.97.0
               with:
-                  components: llvm-tools-preview
-                  cache-key: ci-linux-coverage
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
-            - uses: taiki-e/install-action@cargo-llvm-cov
-            - name: Generate coverage report
-              run: cargo llvm-cov --workspace --exclude vrcx-0 --locked --json --summary-only > rust-coverage-summary.json
-            - uses: actions/upload-artifact@v7
+                  components: rustfmt, clippy
+            - uses: Swatinem/rust-cache@v2
               with:
-                  name: rust-coverage-summary
-                  path: rust-coverage-summary.json
-                  if-no-files-found: error
-                  retention-days: 7
+                  shared-key: ci-web-rust
+                  save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+            - run: cargo fmt --all -- --check
+            - run: cargo clippy --locked -p vrcx-0-web --all-targets --no-deps -- -D warnings
+            - run: cargo test --locked -p vrcx-0-web
 
-    rust-tests:
-        name: Rust Tests (${{ matrix.label }})
-        runs-on: ${{ matrix.os }}
-        timeout-minutes: 60
+    docker:
+        name: Web Docker Build and Startup
         needs: changes
-        if: needs.changes.outputs.rust == 'true'
-        defaults:
-            run:
-                shell: bash
-        strategy:
-            fail-fast: false
-            matrix:
-                include:
-                    - label: Linux
-                      os: ubuntu-24.04
-                      cache_key: ci-test-linux-x86_64
-                      rust_test_args: --features vrcx-0-vr-overlay/slint-ui
-                    - label: Windows
-                      os: windows-latest
-                      cache_key: ci-test-windows-x86_64
-                      rust_test_args: ''
-                    - label: macOS
-                      os: macos-latest
-                      cache_key: ci-test-macos-aarch64
-                      rust_test_args: --exclude vrcx-0-overlay-runtime
-        steps:
-            - uses: actions/checkout@v7
-            - name: Install Slint Linux dependencies
-              if: runner.os == 'Linux'
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends libfontconfig1-dev libfreetype6-dev
-            - uses: actions/setup-node@v6
-              with:
-                  node-version: 24.x
-            - uses: ./.github/actions/setup-rust
-              with:
-                  cache-key: ${{ matrix.cache_key }}
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
-            - env:
-                  RUST_TEST_ARGS: ${{ matrix.rust_test_args }}
-              run: npm run rust:test:ci -- $RUST_TEST_ARGS
-
-    tauri-bindings:
-        name: Tauri Bindings Up-to-date
+        if: needs.changes.outputs.web == 'true'
         runs-on: ubuntu-24.04
-        timeout-minutes: 45
-        needs: changes
-        if: needs.changes.outputs.tauri_bindings == 'true'
+        timeout-minutes: 120
+        env:
+            DOCKER_BUILD_RECORD_UPLOAD: 'false'
+            VRCX_WEB_PASSWORD: ci-compose-validation-only
         steps:
             - uses: actions/checkout@v7
-            - uses: ./.github/actions/setup-linux-tauri
               with:
-                  mode: ci
-            - uses: ./.github/actions/setup-node
-            - uses: ./.github/actions/setup-rust
-              with:
-                  cache-key: ci-linux-bindings
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
-            - run: npm run generate:tauri-bindings
-            - name: Verify bindings.ts is regenerated
-              run: git diff --exit-code src/platform/tauri/bindings.ts
-
-    combined-coverage:
-        name: Publish Coverage Badge
-        runs-on: ubuntu-latest
-        timeout-minutes: 10
-        needs:
-            - frontend-test
-            - rust-coverage
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        permissions:
-            contents: write
-        steps:
-            - uses: actions/checkout@v7
-            - uses: actions/setup-node@v6
-              with:
-                  node-version: 24.x
-            - uses: actions/download-artifact@v8
-              with:
-                  name: ts-coverage-summary
-                  path: coverage-artifacts/ts
-            - uses: actions/download-artifact@v8
-              with:
-                  name: rust-coverage-summary
-                  path: coverage-artifacts/rust
-            - name: Generate coverage badge
+                  persist-credentials: false
+            - name: Validate deployment templates
               run: |
-                  node <<'NODE'
-                  const fs = require('node:fs');
-
-                  const ts = JSON.parse(fs.readFileSync('coverage-artifacts/ts/coverage-summary.json', 'utf8'));
-                  const rust = JSON.parse(fs.readFileSync('coverage-artifacts/rust/rust-coverage-summary.json', 'utf8'));
-
-                  const tsPct = ts.total.lines.pct;
-                  const rustPct = rust.data[0].totals.lines.percent;
-
-                  fs.writeFileSync(
-                      'coverage.json',
-                      JSON.stringify({
-                          schemaVersion: 1,
-                          label: 'coverage',
-                          message: `TS ${tsPct.toFixed(1)}% · Rust ${rustPct.toFixed(1)}%`
-                      }) + '\n'
-                  );
-                  NODE
-            - name: Publish coverage badge to badge-data branch
-              env:
-                  GH_TOKEN: ${{ github.token }}
-              run: |
-                  set -euo pipefail
-                  work="$(mktemp -d)"
-                  cd "$work"
-                  git init -q
-                  git config user.name "github-actions[bot]"
-                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                  repo_url="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-                  if git fetch -q "$repo_url" badge-data 2>/dev/null; then
-                      git checkout -q -b badge-data FETCH_HEAD
-                  else
-                      git checkout -q --orphan badge-data
-                      git rm -rf . --quiet 2>/dev/null || true
-                  fi
-                  cp "$GITHUB_WORKSPACE/coverage.json" coverage.json
-                  git rm -f --ignore-unmatch rust-coverage.json
-                  git add coverage.json
-                  git diff --cached --quiet && exit 0
-                  git commit -q -m "chore(badge): coverage"
-                  git push -q -f "$repo_url" badge-data
+                  docker compose --env-file /dev/null -f compose.example.yaml config --quiet
+                  docker compose --env-file /dev/null -f compose.example.yaml -f compose.build.yaml config --quiet
+            - uses: docker/setup-buildx-action@v3
+            - name: Build the Web image
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: Dockerfile.web
+                  platforms: linux/amd64
+                  load: true
+                  push: false
+                  tags: vrcx-0-web:ci
+                  cache-from: type=gha,scope=ci-web-amd64
+                  cache-to: type=gha,scope=ci-web-amd64,mode=max
+            - name: Test container startup with isolated data
+              run: bash scripts/smoke-web-image.sh vrcx-0-web:ci
 
     ci-success:
         name: CI Success
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         timeout-minutes: 5
         if: always()
-        needs:
-            - changes
-            - frontend-checks
-            - frontend-build
-            - frontend-test
-            - rust-checks
-            - logger-musl
-            - tauri-build
-            - rust-tests
-            - tauri-bindings
+        needs: [changes, frontend, rust, docker]
         steps:
-            - name: Verify no required job failed
+            - name: Verify all required checks completed
               env:
-                  RESULTS: ${{ join(needs.*.result, ' ') }}
+                  CHECKS: ${{ toJSON(needs) }}
               run: |
-                  set -euo pipefail
-                  echo "job results: $RESULTS"
-                  for result in $RESULTS; do
-                      if [[ "$result" != "success" && "$result" != "skipped" ]]; then
-                          echo "A required job did not pass: $result" >&2
-                          exit 1
-                      fi
-                  done
+                  node <<'NODE'
+                  const checks = JSON.parse(process.env.CHECKS);
+                  const web = checks.changes.outputs.web;
+                  const failures = [];
+                  for (const job of ['changes', 'frontend']) {
+                      if (checks[job].result !== 'success') failures.push(`${job}: ${checks[job].result}`);
+                  }
+                  if (web !== 'true' && web !== 'false') failures.push('Change detection did not return a valid result');
+                  for (const job of ['rust', 'docker']) {
+                      const expected = web === 'true' ? 'success' : 'skipped';
+                      if (checks[job].result !== expected) failures.push(`${job}: ${checks[job].result} (expected ${expected})`);
+                  }
+                  if (failures.length) {
+                      console.error(failures.join('\n'));
+                      process.exit(1);
+                  }
+                  NODE

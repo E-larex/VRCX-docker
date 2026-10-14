@@ -1,6 +1,6 @@
 # VRCX-0 Web
 
-English | [French](README.fr-FR.md) | [Simplified Chinese](README.zh-CN.md) | [Traditional Chinese](README.zh-Hant.md) | [Japanese](README.ja-JP.md) | [Korean](README.ko-KR.md)
+English | [Français](README.fr-FR.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-Hant.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
 
 **A Docker web edition based on the original [VRCX-0](https://github.com/Map1en/VRCX-0), with development driven by ChatGPT.**
 
