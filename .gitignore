@@ -24,3 +24,6 @@ tsconfig.tsbuildinfo
 .env.*
 !.env.example
 /data/
+
+# Local deployment configuration
+/compose.yaml

@@ -21,10 +21,12 @@ VRCX_WEB_PORT=8080
 TZ=Asia/Shanghai
 ```
 
-Construisez et démarrez le service :
+Téléchargez l’image et démarrez le service :
 
 ```sh
-docker compose up -d --build
+cp compose.example.yaml compose.yaml
+docker compose pull
+docker compose up -d
 docker compose logs -f web
 ```
 
@@ -42,7 +44,7 @@ VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
 
-Exécutez `docker compose up -d --build`, puis ouvrez `http://192.168.1.10:8080` en remplaçant l’adresse IP par celle du serveur. Ce mode ignore `VRCX_WEB_ORIGIN` et vérifie la correspondance entre Origin et Host. Il accepte les IPv4 privées, IPv6 ULA, adresses locales au lien et de bouclage, ainsi que `localhost`. Les noms de domaine ordinaires utilisent le mode à origine fixe. Le navigateur peut limiter le presse-papiers en HTTP. Pour revenir à HTTPS, réglez le mode LAN sur `0` et restaurez l’adresse d’écoute et votre origine HTTPS.
+Exécutez `docker compose pull && docker compose up -d`, puis ouvrez `http://192.168.1.10:8080` en remplaçant l’adresse IP par celle du serveur. Ce mode ignore `VRCX_WEB_ORIGIN` et vérifie la correspondance entre Origin et Host. Il accepte les IPv4 privées, IPv6 ULA, adresses locales au lien et de bouclage, ainsi que `localhost`. Les noms de domaine ordinaires utilisent le mode à origine fixe. Le navigateur peut limiter le presse-papiers en HTTP. Pour revenir à HTTPS, réglez le mode LAN sur `0` et restaurez l’adresse d’écoute et votre origine HTTPS.
 
 ## Fonctions et fonctionnement en arrière-plan
 
@@ -61,7 +63,7 @@ Les sélecteurs de fichiers sont remplacés par les transferts du navigateur, li
 
 Pour une sauvegarde complète, exécutez `docker compose stop web`, copiez tout `./data`, fichiers cachés compris, puis exécutez `docker compose start web`. Restaurez avec le propriétaire `10001:10001`. Les sauvegardes contiennent les sessions des comptes.
 
-Après mise à jour des sources de cette branche, exécutez `docker compose up -d --build`. Arrêtez les services avec `docker compose down`. Les sessions Web durent au maximum 7 jours et nécessitent une nouvelle connexion après redémarrage ; les sessions VRChat persistées restent distinctes. Après modification du mot de passe Web, exécutez `docker compose up -d --force-recreate web`.
+Pour mettre à jour l’image, exécutez `docker compose pull && docker compose up -d`. Arrêtez les services avec `docker compose down`. Les sessions Web durent au maximum 7 jours et nécessitent une nouvelle connexion après redémarrage ; les sessions VRChat persistées restent distinctes. Après modification du mot de passe Web, exécutez `docker compose up -d --force-recreate web`.
 
 ## Développement et documentation détaillée
 

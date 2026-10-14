@@ -21,10 +21,12 @@ VRCX_WEB_PORT=8080
 TZ=Asia/Shanghai
 ```
 
-建置並啟動：
+拉取映像並啟動：
 
 ```sh
-docker compose up -d --build
+cp compose.example.yaml compose.yaml
+docker compose pull
+docker compose up -d
 docker compose logs -f web
 ```
 
@@ -42,7 +44,7 @@ VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
 
-再次執行 `docker compose up -d --build`，使用 `http://伺服器的區域網路IP:8080` 存取。此模式忽略 `VRCX_WEB_ORIGIN`，驗證 Origin 與 Host 相符，支援私有 IPv4、IPv6 ULA、鏈路本地、回環 IP 及 `localhost`。一般網域使用固定 Origin 模式。HTTP 下瀏覽器可能限制剪貼簿功能。回復 HTTPS 部署時，將 LAN 模式設為 `0`，還原監聽位址及實際 HTTPS Origin。
+再次執行 `docker compose pull && docker compose up -d`，使用 `http://伺服器的區域網路IP:8080` 存取。此模式忽略 `VRCX_WEB_ORIGIN`，驗證 Origin 與 Host 相符，支援私有 IPv4、IPv6 ULA、鏈路本地、回環 IP 及 `localhost`。一般網域使用固定 Origin 模式。HTTP 下瀏覽器可能限制剪貼簿功能。回復 HTTPS 部署時，將 LAN 模式設為 `0`，還原監聽位址及實際 HTTPS Origin。
 
 ## 功能與背景執行
 
@@ -61,7 +63,7 @@ VRCX_WEB_PORT=8080
 
 完整備份前執行 `docker compose stop web`，複製完整 `./data`（含隱藏檔），再執行 `docker compose start web`。還原時維持 `10001:10001` 擁有權。備份含帳號工作階段，請妥善保管。
 
-更新本分支原始碼後執行 `docker compose up -d --build`。停止服務使用 `docker compose down`。網站登入最長維持 7 天，伺服器重啟後需重新登入；已儲存的 VRChat 工作階段獨立保留。修改網站密碼後執行 `docker compose up -d --force-recreate web`。
+更新映像時執行 `docker compose pull && docker compose up -d`。停止服務使用 `docker compose down`。網站登入最長維持 7 天，伺服器重啟後需重新登入；已儲存的 VRChat 工作階段獨立保留。修改網站密碼後執行 `docker compose up -d --force-recreate web`。
 
 ## 開發與詳細說明
 

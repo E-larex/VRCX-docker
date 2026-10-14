@@ -21,10 +21,12 @@ VRCX_WEB_PORT=8080
 TZ=Asia/Shanghai
 ```
 
-ビルドして起動します。
+イメージを取得して起動します。
 
 ```sh
-docker compose up -d --build
+cp compose.example.yaml compose.yaml
+docker compose pull
+docker compose up -d
 docker compose logs -f web
 ```
 
@@ -42,7 +44,7 @@ VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
 
-`docker compose up -d --build` を実行し、`http://サーバーのLAN内IP:8080` にアクセスします。このモードは `VRCX_WEB_ORIGIN` を無視し、Origin と Host の一致を確認します。プライベート IPv4、IPv6 ULA、リンクローカル、ループバック IP、`localhost` に対応します。通常のドメイン名では固定 Origin モードを使用します。HTTP ではクリップボード機能が制限される場合があります。HTTPS に戻す場合は LAN モードを `0` にし、待ち受けアドレスと実際の HTTPS Origin を戻してください。
+`docker compose pull && docker compose up -d` を実行し、`http://サーバーのLAN内IP:8080` にアクセスします。このモードは `VRCX_WEB_ORIGIN` を無視し、Origin と Host の一致を確認します。プライベート IPv4、IPv6 ULA、リンクローカル、ループバック IP、`localhost` に対応します。通常のドメイン名では固定 Origin モードを使用します。HTTP ではクリップボード機能が制限される場合があります。HTTPS に戻す場合は LAN モードを `0` にし、待ち受けアドレスと実際の HTTPS Origin を戻してください。
 
 ## 機能とバックグラウンド動作
 
@@ -61,7 +63,7 @@ VRCX_WEB_PORT=8080
 
 全体バックアップは `docker compose stop web` の後、隠しファイルを含む `./data` 全体をコピーし、`docker compose start web` で再開します。復元時の所有者は `10001:10001` にしてください。バックアップにはアカウントセッションが含まれます。
 
-本ブランチのソース更新後に `docker compose up -d --build` を実行します。停止は `docker compose down` です。Web セッションは最長 7 日で、サーバー再起動後は再ログインが必要です。永続化された VRChat セッションは別に保持されます。Web パスワード変更後は `docker compose up -d --force-recreate web` を実行します。
+イメージを更新するには `docker compose pull && docker compose up -d` を実行します。停止は `docker compose down` です。Web セッションは最長 7 日で、サーバー再起動後は再ログインが必要です。永続化された VRChat セッションは別に保持されます。Web パスワード変更後は `docker compose up -d --force-recreate web` を実行します。
 
 ## 開発と詳細な手順
 

@@ -1,10 +1,10 @@
 # VRCX-0 Web
 
-English | [Français](README.fr-FR.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-Hant.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
+English | [French](README.fr-FR.md) | [Simplified Chinese](README.zh-CN.md) | [Traditional Chinese](README.zh-Hant.md) | [Japanese](README.ja-JP.md) | [Korean](README.ko-KR.md)
 
 **A Docker web edition based on the original [VRCX-0](https://github.com/Map1en/VRCX-0), with development driven by ChatGPT.**
 
-This fork starts from upstream **v2.32.0** (`9e4e2193b88513882d3b4173e598f48eeb65092b`). It reuses the original Rust business logic, databases, and React interface, keeping changes small to make future upstream updates easier. The development branch is `feat/web-headless`; this is an initial working version.
+This fork starts from upstream **v2.32.0** (`9e4e2193b88513882d3b4173e598f48eeb65092b`). It reuses the original Rust business logic, databases, and React interface, keeping changes small to make future upstream updates easier. This is an initial working version.
 
 Run it on a Linux server without a desktop or display, then access it in a browser. The server keeps collecting friend status and other information from VRChat after the browser closes. It is designed for a single user: one active VRChat account shared across multiple browser sessions, with shared settings and data. The website password is separate from your VRChat password.
 
@@ -12,9 +12,10 @@ ChatGPT drives development of this fork; running the core service does not requi
 
 ## Docker Compose setup
 
-Requirements: a Linux host, Docker, and the Docker Compose plugin. From this repository directory:
+Requirements: an amd64 (Intel/AMD x86-64) Linux host, Docker, and the Docker Compose plugin. The default deployment pulls the public `ghcr.io/e-larex/vrcx-docker:latest` image; no GitHub login or server-side compilation is needed. From this repository directory:
 
 ```sh
+cp compose.example.yaml compose.yaml
 cp .env.example .env
 ```
 
@@ -29,10 +30,11 @@ VRCX_WEB_PORT=8080
 TZ=Asia/Shanghai
 ```
 
-Then build and start:
+Then pull and start:
 
 ```sh
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 docker compose logs -f web
 ```
 
@@ -54,7 +56,7 @@ VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
 
-Run `docker compose up -d --build`, then open `http://192.168.1.10:8080`, replacing the IP with your server's LAN address.
+Run `docker compose pull` and `docker compose up -d`, then open `http://192.168.1.10:8080`, replacing the IP with your server's LAN address.
 
 LAN mode ignores `VRCX_WEB_ORIGIN` and checks that the request Origin matches Host. Private IPv4, IPv6 ULA, link-local and loopback IPs, and `localhost` are supported. Ordinary domain names use the fixed-origin mode. Browser clipboard features may be restricted over HTTP.
 
@@ -85,47 +87,27 @@ Website sessions last up to 7 days and are cleared on server restart; persisted 
 
 ## Updating and stopping
 
-After updating this branch's source:
+Pull the new image and recreate the containers:
 
 ```sh
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
+
+To pin a release or roll back, set `VRCX_WEB_IMAGE=ghcr.io/e-larex/vrcx-docker:2.32.0-web.1` in `.env`, then run the pull and start commands above. Both services use the same image. Rolling back an image does not roll back the database; restore the complete pre-update backup if a migration is incompatible with the older version.
 
 Use `docker compose down` to stop the deployment. Start again with the command above. Back up `./data` before updates.
 
-## Development and upstream updates
+## Building from source
 
-Most new code lives in `crates/web-server` and `src/platform/web`:
-
-1. Vite's `web` mode replaces Tauri calls, events, file operations, and window APIs with HTTP/SSE/browser adapters. Original UI components and generated bindings remain shared.
-2. The web server selects desktop-independent modules from `src-tauri/src/commands` at build time and generates HTTP dispatch, reusing original command implementations, error types, and `AppState`.
-3. `runtime-host-desktop` supplies the existing business services. Its `web-host` feature disables local game and overlay services without creating a Tauri application, window, or display server. The original headless CLI remains separate.
-
-Use the Node.js/npm versions required by [package.json](package.json), a compatible Rust toolchain, and Linux fontconfig development libraries:
+For a local Docker build, first copy the configuration files as shown above and configure `.env`, then use the explicit build override:
 
 ```sh
-npm ci
-npm run build:web
-cargo build --locked -p vrcx-0-web
-VRCX_WEB_ORIGIN=http://localhost:8080 \
-  VRCX_WEB_PASSWORD_FILE=/path/to/website-password \
-  VRCX_LEGACY_DATA_DIR=./data/legacy \
-  target/debug/vrcx-0-web --data-dir ./data
+docker compose -f compose.yaml -f compose.build.yaml build web
+docker compose -f compose.yaml -f compose.build.yaml up -d
 ```
 
-For frontend hot reload, run `npm run dev:web` on port 9000. API requests are proxied to `127.0.0.1:8080`; set the backend origin to `http://localhost:9000`. A standalone binary needs a process manager or manual restart after restore/migration exits.
-
-When merging an upstream tag, check the command selection in `crates/web-server/build.rs`, newly added desktop UI entries, and `web-host` guards. Build desktop and web packages separately to prevent Cargo feature unification from enabling `web-host` on the desktop build.
-
-```sh
-npm run typecheck
-npm run lint
-npm run build:web
-cargo test --locked -p vrcx-0-web
-docker compose build
-```
-
-Automated checks cover website authentication, origin validation, original database commands, desktop capability restrictions, and file access boundaries. Real VRChat account login, two-factor verification, long-running events, and third-party Webhook delivery still require acceptance testing with actual accounts and endpoints.
+Both services then use `vrcx-0-web:local` without pulling from GHCR. Use the same two `-f` options for subsequent logs, stop, and other Compose commands.
 
 ## Credits and license
 

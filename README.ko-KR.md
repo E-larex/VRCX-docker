@@ -21,10 +21,12 @@ VRCX_WEB_PORT=8080
 TZ=Asia/Shanghai
 ```
 
-빌드하고 실행합니다.
+이미지를 내려받고 실행합니다.
 
 ```sh
-docker compose up -d --build
+cp compose.example.yaml compose.yaml
+docker compose pull
+docker compose up -d
 docker compose logs -f web
 ```
 
@@ -42,7 +44,7 @@ VRCX_WEB_LISTEN=0.0.0.0
 VRCX_WEB_PORT=8080
 ```
 
-`docker compose up -d --build`를 실행하고 `http://서버의LAN_IP:8080`으로 접속합니다. 이 모드는 `VRCX_WEB_ORIGIN`을 무시하고 Origin과 Host의 일치를 확인합니다. 사설 IPv4, IPv6 ULA, 링크 로컬 및 루프백 IP, `localhost`를 지원합니다. 일반 도메인은 고정 Origin 모드를 사용하세요. HTTP에서는 클립보드 기능이 제한될 수 있습니다. HTTPS로 돌아가려면 LAN 모드를 `0`으로 설정하고 바인딩 주소와 실제 HTTPS Origin을 복원합니다.
+`docker compose pull && docker compose up -d`를 실행하고 `http://서버의LAN_IP:8080`으로 접속합니다. 이 모드는 `VRCX_WEB_ORIGIN`을 무시하고 Origin과 Host의 일치를 확인합니다. 사설 IPv4, IPv6 ULA, 링크 로컬 및 루프백 IP, `localhost`를 지원합니다. 일반 도메인은 고정 Origin 모드를 사용하세요. HTTP에서는 클립보드 기능이 제한될 수 있습니다. HTTPS로 돌아가려면 LAN 모드를 `0`으로 설정하고 바인딩 주소와 실제 HTTPS Origin을 복원합니다.
 
 ## 기능과 백그라운드 실행
 
@@ -61,7 +63,7 @@ VRCX_WEB_PORT=8080
 
 전체 백업은 `docker compose stop web` 실행 후 숨김 파일을 포함한 `./data` 전체를 복사하고 `docker compose start web`으로 다시 시작합니다. 복원 시 소유권은 `10001:10001`로 유지하세요. 백업에는 계정 세션이 포함됩니다.
 
-이 브랜치의 소스를 업데이트한 뒤 `docker compose up -d --build`를 실행합니다. 중지는 `docker compose down`입니다. 웹사이트 세션은 최대 7일이며 서버 재시작 후 다시 로그인해야 합니다. 저장된 VRChat 세션은 별도로 유지됩니다. 웹사이트 비밀번호를 변경한 뒤에는 `docker compose up -d --force-recreate web`을 실행합니다.
+이미지를 업데이트하려면 `docker compose pull && docker compose up -d`를 실행합니다. 중지는 `docker compose down`입니다. 웹사이트 세션은 최대 7일이며 서버 재시작 후 다시 로그인해야 합니다. 저장된 VRChat 세션은 별도로 유지됩니다. 웹사이트 비밀번호를 변경한 뒤에는 `docker compose up -d --force-recreate web`을 실행합니다.
 
 ## 개발 및 상세 안내
 

@@ -1,7 +1,6 @@
 services:
     init-data:
-        image: vrcx-0-web:2.32.0
-        pull_policy: never
+        image: ${VRCX_WEB_IMAGE:-ghcr.io/e-larex/vrcx-docker:latest}
         user: '0:0'
         entrypoint: ['/bin/sh', '-ec']
         command:
@@ -21,10 +20,7 @@ services:
         security_opt:
             - no-new-privileges:true
     web:
-        build:
-            context: .
-            dockerfile: Dockerfile.web
-        image: vrcx-0-web:2.32.0
+        image: ${VRCX_WEB_IMAGE:-ghcr.io/e-larex/vrcx-docker:latest}
         restart: unless-stopped
         init: true
         stop_grace_period: 45s

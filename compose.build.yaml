@@ -1,0 +1,10 @@
+services:
+    init-data:
+        image: vrcx-0-web:local
+        pull_policy: never
+    web:
+        image: vrcx-0-web:local
+        pull_policy: never
+        build:
+            context: .
+            dockerfile: Dockerfile.web
