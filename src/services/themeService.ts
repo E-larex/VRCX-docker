@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { normalizeLanguageCode } from '@/localization/locales';
+import { isWebHost } from '@/platform/host';
 import { tauriClient } from '@/platform/tauri/client';
 import { setWindowTheme, type WindowTheme } from '@/platform/tauri/webview';
 import {
@@ -502,6 +503,12 @@ export async function setCommunityThemeAppearanceControl(
 }
 
 export async function applyZoomLevel(savedZoom: ZoomLevelInput): Promise<void> {
+    if (isWebHost) {
+        useShellStore.getState().setZoomLevel(DEFAULT_ZOOM_LEVEL);
+        await tauriClient.webview.setZoom(1);
+        return;
+    }
+
     if (savedZoom === null || savedZoom === undefined) {
         return;
     }

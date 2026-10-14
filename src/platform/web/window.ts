@@ -34,8 +34,9 @@ const browserWindow = {
     isFocused: async () => document.hasFocus(),
     isMaximized: async () => false,
     scaleFactor: async () => window.devicePixelRatio,
-    setZoom: async (zoom: number) => {
-        document.documentElement.style.zoom = String(zoom);
+    setZoom: async (_zoom: number) => {
+        // Desktop zoom preferences must never scale the browser document.
+        document.documentElement.style.removeProperty('zoom');
     },
     setTheme: async () => {},
     setFocus: async () => window.focus(),

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { isWebHost } from '@/platform/host';
 import {
     ContextMenuCheckboxItem,
     ContextMenuContent,
@@ -54,7 +55,9 @@ export function StatusBarContextMenuContent({
             </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuGroup>
-                {VISIBILITY_MENU_ITEMS.map(([key, label]) => (
+                {VISIBILITY_MENU_ITEMS.filter(
+                    ([key]) => !isWebHost || key !== 'zoom'
+                ).map(([key, label]) => (
                     <ContextMenuCheckboxItem
                         key={key}
                         checked={Boolean(visibility[key])}

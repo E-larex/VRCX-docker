@@ -3,6 +3,7 @@ import { ChevronDownIcon, Settings2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { getLanguageName, languageCodes } from '@/localization/index';
+import { isWebHost } from '@/platform/host';
 import { supportsConfigurableCjkFontPack } from '@/services/themeService';
 import {
     APP_CJK_FONT_PACK_DEFAULT_KEY,
@@ -312,37 +313,39 @@ export function SettingsInterfaceAppearanceCard({
                 />
             ) : null}
 
-            <Field
-                label={t('view.settings.appearance.appearance.zoom')}
-                controlId="settings-zoom"
-            >
-                <div className="flex items-center gap-2">
-                    <NumberField
-                        id="settings-zoom"
-                        name="zoom"
-                        min={30}
-                        max={300}
-                        step={1}
-                        allowOutOfRange
-                        className="w-36"
-                        value={zoomInput === '' ? null : Number(zoomInput)}
-                        onValueChange={(value) =>
-                            onZoomInputChange(
-                                value === null ? '' : String(value)
-                            )
-                        }
-                        onValueCommitted={(value) =>
-                            onZoomBlur(value === null ? '' : String(value))
-                        }
-                    >
-                        <NumberFieldGroup>
-                            <NumberFieldDecrement />
-                            <NumberFieldInput />
-                            <NumberFieldIncrement />
-                        </NumberFieldGroup>
-                    </NumberField>
-                </div>
-            </Field>
+            {!isWebHost && (
+                <Field
+                    label={t('view.settings.appearance.appearance.zoom')}
+                    controlId="settings-zoom"
+                >
+                    <div className="flex items-center gap-2">
+                        <NumberField
+                            id="settings-zoom"
+                            name="zoom"
+                            min={30}
+                            max={300}
+                            step={1}
+                            allowOutOfRange
+                            className="w-36"
+                            value={zoomInput === '' ? null : Number(zoomInput)}
+                            onValueChange={(value) =>
+                                onZoomInputChange(
+                                    value === null ? '' : String(value)
+                                )
+                            }
+                            onValueCommitted={(value) =>
+                                onZoomBlur(value === null ? '' : String(value))
+                            }
+                        >
+                            <NumberFieldGroup>
+                                <NumberFieldDecrement />
+                                <NumberFieldInput />
+                                <NumberFieldIncrement />
+                            </NumberFieldGroup>
+                        </NumberField>
+                    </div>
+                </Field>
+            )}
 
             <Field
                 label={t('view.settings.appearance.appearance.table_density')}

@@ -768,7 +768,7 @@ export const StatusBarFooter = forwardRef<HTMLElement, StatusBarFooterProps>(
                                   </Popover>
                               ))
                             : null}
-                        {visibility.zoom ? (
+                        {!isWebHost && visibility.zoom ? (
                             <Popover>
                                 <PopoverTrigger
                                     render={
