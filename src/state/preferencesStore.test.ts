@@ -353,3 +353,26 @@ describe('preferencesStore normalizers', () => {
         });
     });
 });
+
+it('preserves custom webhook configuration and empty drafts without changing legacy defaults', () => {
+    const template = '{"text":{"content":{{ message | tojson }}}}';
+    expect(
+        normalizePreferenceSnapshot({
+            webhookFormat: 'custom',
+            webhookTemplate: template
+        })
+    ).toMatchObject({ webhookFormat: 'custom', webhookTemplate: template });
+    expect(
+        normalizePreferenceSnapshot({
+            webhookFormat: 'custom',
+            webhookTemplate: ''
+        }).webhookTemplate
+    ).toBe('');
+    expect(normalizePreferenceSnapshot({}).webhookFormat).toBe('generic');
+    expect(normalizePreferenceSnapshot({}).webhookTemplate).toContain(
+        '{{ message | tojson }}'
+    );
+    expect(
+        normalizePreferenceSnapshot({ webhookFormat: 'discord' }).webhookFormat
+    ).toBe('discord');
+});

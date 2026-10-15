@@ -8,7 +8,10 @@ import type {
     WebhookDeliveryRecord,
     WebhookDeliverySnapshot
 } from '@/platform/tauri/bindings';
-import { GENERIC_WEBHOOK_FIELDS } from '@/shared/constants/webhook';
+import {
+    DEFAULT_WEBHOOK_TEMPLATE,
+    GENERIC_WEBHOOK_FIELDS
+} from '@/shared/constants/webhook';
 import { Button } from '@/ui/shadcn/button';
 import { Checkbox } from '@/ui/shadcn/checkbox';
 import {
@@ -32,6 +35,7 @@ import { Switch } from '@/ui/shadcn/switch';
 
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
+import { WebhookTemplateDialog } from './WebhookTemplateDialog';
 
 const GENERIC_WEBHOOK_EXAMPLE = `{
   "version": 1,
@@ -85,7 +89,11 @@ const webhookFormatOptions = [
         'generic',
         'view.settings.notifications.notifications.webhook.format_generic'
     ],
-    ['discord', 'Discord']
+    ['discord', 'Discord'],
+    [
+        'custom',
+        'view.settings.notifications.notifications.webhook.format_custom'
+    ]
 ] satisfies ReadonlyArray<readonly [NotificationWebhookFormat, string]>;
 
 type WebhookPayloadFieldsDialogProps = {
@@ -110,6 +118,7 @@ type WebhookSettingsGroupProps = {
     onWebhookUrlCommit(value: string): void;
     onWebhookFormatChange(value: NotificationWebhookFormat): void;
     onWebhookFieldsChange(value: string): void;
+    onWebhookTemplateSave(value: string): Promise<void>;
     onOpenWebhookNotificationFiltersDialog(): void;
     onTestWebhook(): void;
     deliverySnapshot: WebhookDeliverySnapshot | null;
@@ -166,6 +175,7 @@ export function WebhookSettingsGroup({
     onWebhookUrlCommit,
     onWebhookFormatChange,
     onWebhookFieldsChange,
+    onWebhookTemplateSave,
     onOpenWebhookNotificationFiltersDialog,
     onTestWebhook,
     deliverySnapshot,
@@ -284,6 +294,22 @@ export function WebhookSettingsGroup({
                     </div>
                 </Select>
             </Field>
+
+            {prefs.webhookFormat === 'custom' && (
+                <Field
+                    label={t(
+                        'view.settings.notifications.notifications.webhook.template_json'
+                    )}
+                >
+                    <WebhookTemplateDialog
+                        template={String(
+                            prefs.webhookTemplate ?? DEFAULT_WEBHOOK_TEMPLATE
+                        )}
+                        disabled={!webhookControlsEnabled}
+                        onSave={onWebhookTemplateSave}
+                    />
+                </Field>
+            )}
 
             <Field
                 label={t(

@@ -620,6 +620,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::registry::app__vrchat_group_order_set,
             commands::host::window::app__desktop_notification,
             commands::host::overlay_notifications::app__webhook_send_test,
+            commands::host::overlay_notifications::app__webhook_template_preview,
             commands::host::overlay_notifications::app__webhook_delivery_snapshot_get,
             commands::host::window::app__auth_failure_notification_show,
             commands::local::local_player_moderations::app__get_vrchat_user_moderation,

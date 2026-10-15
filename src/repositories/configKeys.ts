@@ -1,4 +1,7 @@
-import { DEFAULT_GENERIC_WEBHOOK_FIELDS } from '@/shared/constants/webhook';
+import {
+    DEFAULT_GENERIC_WEBHOOK_FIELDS,
+    DEFAULT_WEBHOOK_TEMPLATE
+} from '@/shared/constants/webhook';
 
 type ConfigValueType = 'string' | 'int' | 'bool' | 'float';
 export type ConfigDefaultValue = string | number | boolean | null;
@@ -196,6 +199,7 @@ export const ConfigKeys = defineConfigKeys({
     webhookAuthEventsEnabled: { type: 'bool', default: true },
     webhookUrl: { type: 'string', default: '' },
     webhookFormat: { type: 'string', default: 'generic' },
+    webhookTemplate: { type: 'string', default: DEFAULT_WEBHOOK_TEMPLATE },
     webhookFields: {
         type: 'string',
         default: DEFAULT_GENERIC_WEBHOOK_FIELDS

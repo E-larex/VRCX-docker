@@ -9,12 +9,14 @@ pub enum NotificationWebhookFormat {
     #[default]
     Generic,
     Discord,
+    Custom,
 }
 
 impl NotificationWebhookFormat {
     pub(super) fn from_config(value: &str) -> Self {
         match value {
             "discord" => Self::Discord,
+            "custom" => Self::Custom,
             _ => Self::Generic,
         }
     }
@@ -25,6 +27,7 @@ pub(super) struct NotificationWebhookPreferences {
     pub url: String,
     pub format: NotificationWebhookFormat,
     pub fields: Vec<String>,
+    pub template: String,
     pub show_instance_id_in_location: bool,
 }
 
@@ -39,6 +42,7 @@ pub(super) fn load_webhook_preferences(
             "webhookFormat",
             "generic",
         )),
+        template: config_string(config, "webhookTemplate", super::DEFAULT_WEBHOOK_TEMPLATE),
         fields: parse_webhook_fields(&config_string(config, "webhookFields", "")),
         show_instance_id_in_location: config_bool(config, "VRCX_showInstanceIdInLocation", false),
     }

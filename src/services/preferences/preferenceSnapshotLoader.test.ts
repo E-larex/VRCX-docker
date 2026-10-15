@@ -138,6 +138,22 @@ describe('preferenceSnapshotLoader', () => {
         mocks.appSystemCulture.mockResolvedValue('ja-JP');
     });
 
+    it('restores a custom webhook format and template from persisted settings', async () => {
+        const template = '{"body":{{ message | tojson }}}';
+        mocks.getString.mockImplementation(
+            async (key: string, fallback: string) => {
+                if (key === 'webhookFormat') return 'custom';
+                if (key === 'webhookTemplate') return template;
+                return fallback;
+            }
+        );
+        await loadPreferenceSnapshot();
+        expect(usePreferencesStore.getState()).toMatchObject({
+            webhookFormat: 'custom',
+            webhookTemplate: template
+        });
+    });
+
     it('loads and normalizes shell, proxy, table, and notification preferences', async () => {
         const classes = installDocumentStub();
         mocks.getString.mockImplementation((key: string, fallback = '') => {

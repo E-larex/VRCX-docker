@@ -1,0 +1,17 @@
+[
+    "version",
+    "event",
+    "category",
+    "title",
+    "message",
+    "user.id",
+    "user.displayName",
+    "location",
+    "locationId",
+    "worldId",
+    "worldName",
+    "timestamp",
+    "localTime",
+    "reason",
+    "mode"
+]

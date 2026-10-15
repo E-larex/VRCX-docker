@@ -166,6 +166,7 @@ describe('WebhookSettingsGroup', () => {
                 onWebhookUrlCommit={noop}
                 onWebhookFormatChange={noop}
                 onWebhookFieldsChange={noop}
+                onWebhookTemplateSave={async () => {}}
                 onOpenWebhookNotificationFiltersDialog={noop}
                 onTestWebhook={noop}
                 deliverySnapshot={null}
@@ -202,6 +203,7 @@ describe('WebhookSettingsGroup', () => {
                 onWebhookUrlCommit={onWebhookUrlCommit}
                 onWebhookFormatChange={noop}
                 onWebhookFieldsChange={noop}
+                onWebhookTemplateSave={async () => {}}
                 onOpenWebhookNotificationFiltersDialog={noop}
                 onTestWebhook={noop}
                 deliverySnapshot={null}

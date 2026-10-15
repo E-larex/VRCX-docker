@@ -2603,12 +2603,25 @@ const generatedCommands = {
     async appWebhookSendTest(
         url: string,
         format: NotificationWebhookFormat,
-        fields: string
+        fields: string,
+        template: string | null,
+        sample: WebhookSample | null
     ): Promise<WebhookDeliveryOutcome> {
         return await TAURI_INVOKE('app__webhook_send_test', {
             url,
             format,
-            fields
+            fields,
+            template,
+            sample
+        });
+    },
+    async appWebhookTemplatePreview(
+        template: string,
+        sample: WebhookSample | null
+    ): Promise<JsonValue> {
+        return await TAURI_INVOKE('app__webhook_template_preview', {
+            template,
+            sample
         });
     },
     async appWebhookDeliverySnapshotGet(): Promise<WebhookDeliverySnapshot> {
@@ -5867,7 +5880,7 @@ export type NotificationTarget = {
     type?: string;
     senderUserId?: string;
 };
-export type NotificationWebhookFormat = 'generic' | 'discord';
+export type NotificationWebhookFormat = 'generic' | 'discord' | 'custom';
 export type NowPlayingPayload = {
     url?: string | null;
     name?: string | null;
@@ -7150,6 +7163,7 @@ export type WebhookDeliverySnapshot = {
     notification: WebhookDeliveryChannelSnapshot;
     auth: WebhookDeliveryChannelSnapshot;
 };
+export type WebhookSample = 'notification' | 'auth';
 export type WorldDetail = {
     id?: string;
     name?: string | null;

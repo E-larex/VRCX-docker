@@ -166,6 +166,22 @@ async fn deliver_notification_webhook(
         NotificationWebhookFormat::Generic => {
             generic_webhook_payload(&job.delivery, &render, &job.preferences.fields)
         }
+        NotificationWebhookFormat::Custom => {
+            let context = generic_webhook_payload(&job.delivery, &render, &[]);
+            match super::render_custom_webhook(&job.preferences.template, &context) {
+                Ok(payload) => payload,
+                Err(reason) => {
+                    deps.monitor.record_drop(
+                        &deps.diagnostics,
+                        "notificationWebhook",
+                        WebhookDeliveryChannel::Notification,
+                        job.delivery.entry.kind.key(),
+                        &reason,
+                    );
+                    return;
+                }
+            }
+        }
         NotificationWebhookFormat::Discord => {
             build_discord_payload(
                 &DiscordDeps {
@@ -180,7 +196,9 @@ async fn deliver_notification_webhook(
         }
     };
     let url = match job.format {
-        NotificationWebhookFormat::Generic => job.preferences.url.trim().to_string(),
+        NotificationWebhookFormat::Generic | NotificationWebhookFormat::Custom => {
+            job.preferences.url.trim().to_string()
+        }
         NotificationWebhookFormat::Discord => {
             discord_webhook_url_with_wait(job.preferences.url.trim())
         }
@@ -222,7 +240,84 @@ mod tests {
             url: "https://example.com/webhook".into(),
             format: NotificationWebhookFormat::Generic,
             fields: Vec::new(),
+            template: super::super::DEFAULT_WEBHOOK_TEMPLATE.into(),
             show_instance_id_in_location: false,
         }
+    }
+
+    #[tokio::test]
+    async fn custom_delivery_uses_full_context_and_preserves_retries() {
+        use super::super::tests::{delivery, NoRemote, RecordingWebhookTransport};
+        let transport = Arc::new(RecordingWebhookTransport {
+            fail_first: true,
+            ..Default::default()
+        });
+        let deps = NotificationWebhookWorkerDeps {
+            resolver: Arc::new(NotificationResolver::new(Arc::new(NoRemote))),
+            webhook_transport: transport.clone(),
+            diagnostics: RuntimeDiagnostics::new(),
+            monitor: WebhookDeliveryMonitor::default(),
+        };
+        let mut preferences = enabled_preferences();
+        preferences.fields = vec!["event".into()];
+        preferences.template =
+            r#"{"text":{"content":{{ (user.displayName ~ ' in ' ~ worldName) | tojson }}}}"#.into();
+        deliver_notification_webhook(
+            &deps,
+            NotificationWebhookJob {
+                delivery: delivery(),
+                preferences,
+                format: NotificationWebhookFormat::Custom,
+                locale: Default::default(),
+                vrchat_endpoint: String::new(),
+            },
+        )
+        .await;
+        let requests = transport.requests.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[0], requests[1]);
+        assert_eq!(requests[0].0, "https://example.com/webhook");
+        assert_eq!(
+            requests[0].1,
+            serde_json::json!({"text":{"content":"Traveler in Named World"}})
+        );
+        assert_eq!(
+            deps.monitor
+                .snapshot()
+                .notification
+                .last_success
+                .unwrap()
+                .attempts,
+            2
+        );
+    }
+
+    #[tokio::test]
+    async fn invalid_template_does_not_send_or_fall_back() {
+        use super::super::tests::{delivery, NoRemote, RecordingWebhookTransport};
+        let transport = Arc::new(RecordingWebhookTransport::default());
+        let deps = NotificationWebhookWorkerDeps {
+            resolver: Arc::new(NotificationResolver::new(Arc::new(NoRemote))),
+            webhook_transport: transport.clone(),
+            diagnostics: RuntimeDiagnostics::new(),
+            monitor: WebhookDeliveryMonitor::default(),
+        };
+        let mut preferences = enabled_preferences();
+        preferences.template = r#"{"body":{{ unknown | tojson }}}"#.into();
+        deliver_notification_webhook(
+            &deps,
+            NotificationWebhookJob {
+                delivery: delivery(),
+                preferences,
+                format: NotificationWebhookFormat::Custom,
+                locale: Default::default(),
+                vrchat_endpoint: String::new(),
+            },
+        )
+        .await;
+        assert!(transport.requests.lock().unwrap().is_empty());
+        let status = deps.monitor.snapshot().notification;
+        assert_eq!(status.dropped_count, 1);
+        assert_eq!(status.last_failure.unwrap().attempts, 0);
     }
 }

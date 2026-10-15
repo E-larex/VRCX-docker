@@ -4337,6 +4337,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "minijinja"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13345868cfa94eadafc067112ff29271380a820d5594d9ee6ba81a8d00ea5dc2"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9071,6 +9080,7 @@ name = "vrcx-0-application-activity"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "minijinja",
  "moka",
  "serde",
  "serde_json",

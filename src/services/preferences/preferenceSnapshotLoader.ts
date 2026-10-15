@@ -13,7 +13,10 @@ import {
     DEFAULT_TRANSLATION_MODEL
 } from '@/shared/constants/settings';
 import { MINUTES_PER_DAY } from '@/shared/constants/time';
-import { DEFAULT_GENERIC_WEBHOOK_FIELDS } from '@/shared/constants/webhook';
+import {
+    DEFAULT_GENERIC_WEBHOOK_FIELDS,
+    DEFAULT_WEBHOOK_TEMPLATE
+} from '@/shared/constants/webhook';
 import { normalizeTrustColors } from '@/shared/utils/trustColors';
 import {
     normalizeAutoDeletePrintsLimit,
@@ -162,6 +165,7 @@ export async function loadPreferenceSnapshot() {
         webhookAuthEventsEnabled,
         webhookUrl,
         webhookFormat,
+        webhookTemplate,
         webhookFields,
         wristOverlayEnabled,
         wristOverlayStartMode,
@@ -321,6 +325,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getBool('webhookAuthEventsEnabled', true),
         configRepository.getString('webhookUrl', ''),
         configRepository.getString('webhookFormat', 'generic'),
+        configRepository.getString('webhookTemplate', DEFAULT_WEBHOOK_TEMPLATE),
         configRepository.getString(
             'webhookFields',
             DEFAULT_GENERIC_WEBHOOK_FIELDS
@@ -577,7 +582,11 @@ export async function loadPreferenceSnapshot() {
         webhookEnabled: Boolean(webhookEnabled),
         webhookAuthEventsEnabled: Boolean(webhookAuthEventsEnabled),
         webhookUrl: String(webhookUrl || ''),
-        webhookFormat: webhookFormat === 'discord' ? 'discord' : 'generic',
+        webhookFormat:
+            webhookFormat === 'discord' || webhookFormat === 'custom'
+                ? webhookFormat
+                : 'generic',
+        webhookTemplate: String(webhookTemplate ?? DEFAULT_WEBHOOK_TEMPLATE),
         webhookFields: String(webhookFields || DEFAULT_GENERIC_WEBHOOK_FIELDS),
         wristOverlayEnabled: Boolean(wristOverlayEnabled),
         wristOverlayStartMode: normalizeWristOverlayStartMode(

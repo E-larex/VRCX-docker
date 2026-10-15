@@ -25,7 +25,10 @@ import {
 } from '@/shared/constants/settings';
 import { MINUTES_PER_DAY } from '@/shared/constants/time';
 import { TRUST_COLOR_DEFAULTS } from '@/shared/constants/trustColors';
-import { DEFAULT_GENERIC_WEBHOOK_FIELDS } from '@/shared/constants/webhook';
+import {
+    DEFAULT_GENERIC_WEBHOOK_FIELDS,
+    DEFAULT_WEBHOOK_TEMPLATE
+} from '@/shared/constants/webhook';
 import {
     USER_NAME_COLOUR_STYLES,
     type UserNameColourStyle
@@ -159,7 +162,7 @@ export function normalizeTranslationApiType(
 function normalizeNotificationWebhookFormat(
     value: unknown
 ): NotificationWebhookFormat {
-    return value === 'discord' ? 'discord' : 'generic';
+    return value === 'discord' || value === 'custom' ? value : 'generic';
 }
 
 export function normalizeWristOverlayHand(
@@ -379,6 +382,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     webhookAuthEventsEnabled: true,
     webhookUrl: '',
     webhookFormat: 'generic',
+    webhookTemplate: DEFAULT_WEBHOOK_TEMPLATE,
     webhookFields: DEFAULT_GENERIC_WEBHOOK_FIELDS,
     wristOverlayEnabled: false,
     wristOverlayStartMode: 'vrchatVrMode',
@@ -639,6 +643,9 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
         webhookAuthEventsEnabled: normalizeBool(next.webhookAuthEventsEnabled),
         webhookUrl: String(next.webhookUrl || ''),
         webhookFormat: normalizeNotificationWebhookFormat(next.webhookFormat),
+        webhookTemplate: String(
+            next.webhookTemplate ?? DEFAULT_WEBHOOK_TEMPLATE
+        ),
         webhookFields: String(
             next.webhookFields || DEFAULT_GENERIC_WEBHOOK_FIELDS
         ),

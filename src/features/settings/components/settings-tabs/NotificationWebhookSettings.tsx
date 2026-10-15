@@ -7,6 +7,7 @@ import {
     type NotificationWebhookFormat,
     type WebhookDeliverySnapshot
 } from '@/platform/tauri/bindings';
+import { setStringConfigPreference } from '@/services/preferencesService';
 import { toast } from '@/services/toastService';
 import { usePreferencesStore } from '@/state/preferencesStore';
 
@@ -26,6 +27,7 @@ export function NotificationWebhookSettings() {
             webhookAuthEventsEnabled: state.webhookAuthEventsEnabled,
             webhookUrl: state.webhookUrl,
             webhookFormat: state.webhookFormat,
+            webhookTemplate: state.webhookTemplate,
             webhookFields: state.webhookFields
         }))
     );
@@ -85,35 +87,36 @@ export function NotificationWebhookSettings() {
         saveStringPreference('webhookFields', 'webhookFields', value);
     }
 
+    async function saveWebhookTemplate(value: string) {
+        await setStringConfigPreference('webhookTemplate', value);
+    }
+
     function openWebhookNotificationFilters() {
         setWebhookNotificationsDialogOpen(true);
     }
 
-    function sendTestWebhook() {
-        const webhookFormat =
-            prefs.webhookFormat === 'discord' ? 'discord' : 'generic';
-        commands
-            .appWebhookSendTest(
+    async function sendTestWebhook() {
+        try {
+            const outcome = await commands.appWebhookSendTest(
                 String(prefs.webhookUrl || ''),
-                webhookFormat,
-                String(prefs.webhookFields || '')
-            )
-            .then((outcome) => {
-                toast.add({
-                    type: 'success',
-                    title: t(
-                        'view.settings.notifications.notifications.webhook.test_sent',
-                        { status: outcome.status }
-                    )
-                });
-            })
-            .catch((error: unknown) => {
-                toast.add({
-                    type: 'error',
-                    title:
-                        error instanceof Error ? error.message : String(error)
-                });
+                prefs.webhookFormat,
+                String(prefs.webhookFields || ''),
+                prefs.webhookTemplate,
+                'notification'
+            );
+            toast.add({
+                type: 'success',
+                title: t(
+                    'view.settings.notifications.notifications.webhook.test_sent',
+                    { status: outcome.status }
+                )
             });
+        } catch (error: unknown) {
+            toast.add({
+                type: 'error',
+                title: error instanceof Error ? error.message : String(error)
+            });
+        }
     }
 
     return (
@@ -124,6 +127,7 @@ export function NotificationWebhookSettings() {
             onWebhookUrlCommit={saveWebhookUrl}
             onWebhookFormatChange={saveWebhookFormat}
             onWebhookFieldsChange={saveWebhookFields}
+            onWebhookTemplateSave={saveWebhookTemplate}
             onOpenWebhookNotificationFiltersDialog={
                 openWebhookNotificationFilters
             }

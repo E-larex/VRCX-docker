@@ -90,7 +90,7 @@ fn rendered() -> RenderedNotification {
     }
 }
 
-fn delivery() -> ActivityDelivery {
+pub(super) fn delivery() -> ActivityDelivery {
     ActivityDelivery {
         entry: ActivityEntry {
             sequence: 1,
@@ -187,7 +187,7 @@ fn friend_image_reads_only_the_friend_cache() {
     );
 }
 
-struct NoRemote;
+pub(super) struct NoRemote;
 
 impl NotificationRemote for NoRemote {
     fn user<'a>(
@@ -220,5 +220,48 @@ impl NotificationRemote for NoRemote {
         _world_id: &'a str,
     ) -> NotificationRemoteFuture<'a, String> {
         Box::pin(async { None })
+    }
+}
+
+pub(super) struct WebhookTestConfig(pub std::collections::HashMap<String, String>);
+
+impl super::NotificationConfig for WebhookTestConfig {
+    fn get_raw(&self, key: &str) -> vrcx_0_application_core::Result<Option<String>> {
+        Ok(self.0.get(key).cloned())
+    }
+    fn get_bool(&self, key: &str, fallback: bool) -> vrcx_0_application_core::Result<bool> {
+        Ok(self
+            .0
+            .get(key)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(fallback))
+    }
+    fn get_string(&self, key: &str, fallback: &str) -> vrcx_0_application_core::Result<String> {
+        Ok(self.0.get(key).cloned().unwrap_or_else(|| fallback.into()))
+    }
+    fn set_json(&self, _: &str, _: &serde_json::Value) -> vrcx_0_application_core::Result<()> {
+        unreachable!("read-only test configuration")
+    }
+}
+
+#[derive(Default)]
+pub(super) struct RecordingWebhookTransport {
+    pub requests: std::sync::Mutex<Vec<(String, serde_json::Value)>>,
+    pub fail_first: bool,
+}
+impl super::NotificationWebhookTransport for RecordingWebhookTransport {
+    fn send<'a>(&'a self, url: &'a str, body: &'a str) -> super::NotificationWebhookFuture<'a> {
+        Box::pin(async move {
+            let mut requests = self.requests.lock().unwrap();
+            requests.push((url.into(), serde_json::from_str(body).unwrap()));
+            Ok((
+                if self.fail_first && requests.len() == 1 {
+                    503
+                } else {
+                    204
+                },
+                String::new(),
+            ))
+        })
     }
 }

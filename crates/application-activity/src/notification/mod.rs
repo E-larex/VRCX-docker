@@ -1,5 +1,6 @@
 mod activity_filters;
 mod auth_webhook;
+mod custom_webhook;
 mod discord;
 mod generic_webhook;
 mod image_file;
@@ -28,6 +29,7 @@ pub use auth_webhook::{
     AuthWebhookEvent, AuthWebhookEventKind,
 };
 pub use auth_webhook::{AuthWebhookQueue, AuthWebhookQueueDeps};
+pub use custom_webhook::{render_custom_webhook, DEFAULT_WEBHOOK_TEMPLATE};
 pub use generic_webhook::{filter_generic_webhook_payload, generic_webhook_payload};
 pub use image_file::{extract_file_version, fallback_file_version};
 pub use localization::{

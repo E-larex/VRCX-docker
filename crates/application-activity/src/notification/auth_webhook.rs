@@ -135,9 +135,9 @@ pub fn auth_webhook_is_enabled(config: &dyn NotificationConfig) -> bool {
 fn auth_webhook_job(
     config: &dyn NotificationConfig,
     event: &AuthWebhookEvent,
-) -> Option<AuthWebhookJob> {
+) -> Result<Option<AuthWebhookJob>, String> {
     if !auth_webhook_is_enabled(config) {
-        return None;
+        return Ok(None);
     }
     let url = config.get_string("webhookUrl", "").unwrap_or_default();
     let format = NotificationWebhookFormat::from_config(
@@ -150,15 +150,24 @@ fn auth_webhook_job(
             discord_webhook_url_with_wait(&url),
             auth_webhook_discord_payload(event),
         ),
+        NotificationWebhookFormat::Custom => {
+            let template = config
+                .get_string("webhookTemplate", super::DEFAULT_WEBHOOK_TEMPLATE)
+                .map_err(|_| "Could not load webhook template.".to_string())?;
+            (
+                url.trim().to_string(),
+                super::render_custom_webhook(&template, &auth_webhook_generic_payload(event))?,
+            )
+        }
         NotificationWebhookFormat::Generic => {
             (url.trim().to_string(), auth_webhook_generic_payload(event))
         }
     };
-    Some(AuthWebhookJob {
+    Ok(Some(AuthWebhookJob {
         url,
         payload,
         event_label: event.kind.as_event_name(),
-    })
+    }))
 }
 
 async fn run_auth_webhook_worker(
@@ -174,8 +183,19 @@ async fn run_auth_webhook_worker(
         let Some(event) = event else {
             return;
         };
-        let Some(job) = auth_webhook_job(deps.config.as_ref(), &event) else {
-            continue;
+        let job = match auth_webhook_job(deps.config.as_ref(), &event) {
+            Ok(Some(job)) => job,
+            Ok(None) => continue,
+            Err(reason) => {
+                deps.monitor.record_drop(
+                    &deps.diagnostics,
+                    AUTH_WEBHOOK_DIAGNOSTICS_KEY,
+                    WebhookDeliveryChannel::Auth,
+                    event.kind.as_event_name(),
+                    &reason,
+                );
+                continue;
+            }
         };
         tokio::select! {
             _ = deliver_auth_webhook(&deps, job) => {}
@@ -330,5 +350,58 @@ mod tests {
             mode: BackendRuntimeMode::Background,
             timestamp: "2026-07-03T08:30:00.000Z".into(),
         }
+    }
+
+    #[tokio::test]
+    async fn custom_auth_uses_sanitized_context_and_reports_invalid_templates() {
+        use super::super::tests::{RecordingWebhookTransport, WebhookTestConfig};
+        let transport = Arc::new(RecordingWebhookTransport::default());
+        for (template, valid) in [
+            (
+                r#"{"body":{{ (reason ~ '|' ~ worldName ~ '|' ~ mode) | tojson }}}"#,
+                true,
+            ),
+            (r#"{"body":{{ unknown | tojson }}}"#, false),
+        ] {
+            let config = Arc::new(WebhookTestConfig(
+                [
+                    ("webhookUrl".into(), "https://example.com/auth".into()),
+                    ("webhookFormat".into(), "custom".into()),
+                    ("webhookTemplate".into(), template.into()),
+                    ("webhookEnabled".into(), "false".into()),
+                ]
+                .into(),
+            ));
+            let tasks = TaskSupervisor::new();
+            let monitor = WebhookDeliveryMonitor::default();
+            let queue = AuthWebhookQueue::new(AuthWebhookQueueDeps {
+                config,
+                webhook_transport: transport.clone(),
+                diagnostics: RuntimeDiagnostics::new(),
+                monitor: monitor.clone(),
+                tasks,
+            });
+            queue.enqueue(event());
+            tokio::time::timeout(std::time::Duration::from_secs(2), async {
+                loop {
+                    let snapshot = monitor.snapshot().auth;
+                    if snapshot.last_success.is_some() || snapshot.last_failure.is_some() {
+                        break;
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+                }
+            })
+            .await
+            .unwrap();
+            let status = monitor.snapshot().auth;
+            assert_eq!(status.last_success.is_some(), valid);
+            assert_eq!(status.dropped_count, if valid { 0 } else { 1 });
+        }
+        let requests = transport.requests.lock().unwrap();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(
+            requests[0].1,
+            json!({"body":"expired [redacted]||background"})
+        );
     }
 }

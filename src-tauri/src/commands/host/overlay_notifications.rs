@@ -17,17 +17,74 @@ pub async fn app__webhook_send_test(
     url: String,
     format: NotificationWebhookFormat,
     fields: String,
+    template: Option<String>,
+    sample: Option<WebhookSample>,
 ) -> Result<WebhookDeliveryOutcome, AppError> {
     let url = url.trim();
     if url.is_empty() {
         return Err(AppError::Custom("Webhook URL is required.".into()));
     }
-    let payload = webhook_test_payload(format, &fields);
+    let payload = webhook_sample_payload(
+        format,
+        &fields,
+        template.as_deref(),
+        sample.unwrap_or_default(),
+    )?;
     state
         .runtime_host()
         .send_test_webhook(url.to_string(), format, payload)
         .await
         .map_err(AppError::from)
+}
+
+#[derive(Clone, Copy, Debug, Default, serde::Deserialize, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum WebhookSample {
+    #[default]
+    Notification,
+    Auth,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn app__webhook_template_preview(
+    template: String,
+    sample: Option<WebhookSample>,
+) -> Result<Value, AppError> {
+    webhook_sample_payload(
+        NotificationWebhookFormat::Custom,
+        "",
+        Some(&template),
+        sample.unwrap_or_default(),
+    )
+}
+
+fn webhook_sample_payload(
+    format: NotificationWebhookFormat,
+    fields: &str,
+    template: Option<&str>,
+    sample: WebhookSample,
+) -> Result<Value, AppError> {
+    if format != NotificationWebhookFormat::Custom {
+        return Ok(webhook_test_payload(format, fields));
+    }
+    let template =
+        template.ok_or_else(|| AppError::Custom("Webhook template is required.".into()))?;
+    let context = match sample {
+        WebhookSample::Notification => webhook_test_payload(NotificationWebhookFormat::Generic, ""),
+        WebhookSample::Auth => vrcx_0_application_activity::notification::auth_webhook_generic_payload(
+            &vrcx_0_application_activity::notification::AuthWebhookEvent {
+                kind: vrcx_0_application_activity::notification::AuthWebhookEventKind::ReloginFailed,
+                user_id: "usr_webhook_test".into(),
+                display_name: "VRCX-0".into(),
+                reason: "Synthetic authentication failure.".into(),
+                mode: vrcx_0_application_core::BackendRuntimeMode::Background,
+                timestamp: chrono::Utc::now().to_rfc3339(),
+            },
+        ),
+    };
+    vrcx_0_application_activity::notification::render_custom_webhook(template, &context)
+        .map_err(AppError::Custom)
 }
 
 #[tauri::command(async)]
@@ -113,5 +170,34 @@ mod tests {
 
         assert!(payload.get("locationId").is_none());
         assert!(payload.get("embeds").is_some());
+    }
+
+    #[test]
+    fn custom_preview_and_send_use_the_same_sample_renderer() {
+        use super::{app__webhook_template_preview, webhook_sample_payload, WebhookSample};
+        for sample in [WebhookSample::Notification, WebhookSample::Auth] {
+            let template = r#"{"body":{{ (event ~ '|' ~ message ~ '|' ~ worldName ~ '|' ~ reason) | tojson }}}"#;
+            let preview = app__webhook_template_preview(template.into(), Some(sample)).unwrap();
+            let send = webhook_sample_payload(
+                NotificationWebhookFormat::Custom,
+                "[\"event\"]",
+                Some(template),
+                sample,
+            )
+            .unwrap();
+            assert_eq!(preview, send);
+            assert!(!preview["body"].as_str().unwrap().contains("{{"));
+        }
+        assert!(webhook_sample_payload(
+            NotificationWebhookFormat::Custom,
+            "",
+            None,
+            WebhookSample::Notification
+        )
+        .is_err());
+        assert!(app__webhook_template_preview("{}".into(), None).is_ok());
+        assert!(
+            app__webhook_template_preview(r#"{"x":{{ unknown | tojson }}}"#.into(), None).is_err()
+        );
     }
 }
