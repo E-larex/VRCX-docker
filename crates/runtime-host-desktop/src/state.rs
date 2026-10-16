@@ -280,7 +280,11 @@ impl DesktopRuntimeHostState {
             task_executor: Some(task_executor),
         })?;
         cleanup_legacy_updater_files(&builder.paths().app_data);
-        let host_file_access = HostFileAccess::new();
+        let host_file_access = if cfg!(feature = "web-host") {
+            HostFileAccess::restricted_to(&builder.paths().app_data.join("web-files"))?
+        } else {
+            HostFileAccess::new()
+        };
         register_desktop_file_access_grants(
             &host_file_access,
             builder.profile_backup(),

@@ -8,6 +8,8 @@ Most new code lives in `crates/web-server` and `src/platform/web`:
 2. The web server selects desktop-independent modules from `src-tauri/src/commands` at build time and generates HTTP dispatch, reusing original command implementations, error types, and `AppState`.
 3. `runtime-host-desktop` supplies the existing business services. Its `web-host` feature disables local game and overlay services without creating a Tauri application, window, or display server. The original headless CLI remains separate.
 
+Web file selections and host file grants are confined to `web-files` under the active data directory, including grants restored from settings. Background sources are checked before scanning or granting any path. Image-cache downloads retain their separate read-only boundary in `crates/web-server/src/files.rs`; desktop file selections keep upstream behavior.
+
 Use the Node.js/npm versions required by [package.json](package.json), a compatible Rust toolchain, and Linux fontconfig development libraries:
 
 ```sh

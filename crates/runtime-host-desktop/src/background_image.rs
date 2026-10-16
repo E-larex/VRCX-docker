@@ -111,6 +111,17 @@ impl HostBackgroundImageFileResolver {
 
 impl BackgroundImageFileResolver for HostBackgroundImageFileResolver {
     fn resolve_files(&self, source: &BackgroundImageCustomSource) -> Result<Vec<String>, Error> {
+        // Validate the complete selection before scanning or granting any path.
+        // Desktop selections remain unrestricted; the Web host supplies a fixed root.
+        let paths = match source.kind {
+            BackgroundImageCustomSourceKind::Folder => std::slice::from_ref(&source.folder_path),
+            BackgroundImageCustomSourceKind::Files => source.paths.as_slice(),
+        };
+        for path in paths {
+            self.host_file_access
+                .ensure_selection_allowed(Path::new(path))
+                .map_err(|error| Error::Custom(error.to_string()))?;
+        }
         match source.kind {
             BackgroundImageCustomSourceKind::Folder => {
                 let folder = PathBuf::from(&source.folder_path);

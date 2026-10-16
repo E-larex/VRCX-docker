@@ -134,6 +134,106 @@ impl Drop for TestServer {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn background_sources_cannot_grant_access_outside_web_files() {
+    let server = TestServer::new();
+    // A sibling of web-files is server data, not a browser-selectable resource.
+    let outside = server.data.join("private");
+    std::fs::create_dir(&outside).unwrap();
+    let image = outside.join("private.png");
+    std::fs::write(&image, b"synthetic image").unwrap();
+    for input in [
+        json!({"kind":"setCustomFolder", "folderPath":outside}),
+        json!({"kind":"setCustomFiles", "paths":[image]}),
+    ] {
+        let (status, _) = server
+            .json(
+                "POST",
+                "/api/invoke/app__background_image_configure",
+                json!({"input":input}),
+            )
+            .await;
+        assert!(status.is_client_error());
+        let (status, body) = server
+            .json(
+                "POST",
+                "/api/invoke/app__crop_print_image",
+                json!({"path":image}),
+            )
+            .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(
+            body["message"]
+                .as_str()
+                .unwrap()
+                .contains("File access denied"),
+            "{body}"
+        );
+    }
+    // Persisted or other upstream grants must not widen the Web boundary either.
+    server
+        .state
+        .app
+        .runtime_host()
+        .register_host_file_access(&outside);
+    let (_, body) = server
+        .json(
+            "POST",
+            "/api/invoke/app__crop_print_image",
+            json!({"path":image}),
+        )
+        .await;
+    assert!(
+        body["message"]
+            .as_str()
+            .unwrap()
+            .contains("File access denied"),
+        "{body}"
+    );
+
+    let allowed = server.data.join("web-files/backgrounds");
+    std::fs::create_dir(&allowed).unwrap();
+    let allowed_image = allowed.join("image.png");
+    std::fs::write(&allowed_image, b"synthetic image").unwrap();
+    for input in [
+        json!({"kind":"setCustomFolder", "folderPath":allowed}),
+        json!({"kind":"setCustomFiles", "paths":[allowed_image]}),
+    ] {
+        assert_eq!(
+            server
+                .json(
+                    "POST",
+                    "/api/invoke/app__background_image_configure",
+                    json!({"input":input})
+                )
+                .await
+                .0,
+            StatusCode::OK
+        );
+    }
+    #[cfg(unix)]
+    {
+        let link = allowed.join("outside");
+        std::os::unix::fs::symlink(&outside, &link).unwrap();
+        for input in [
+            json!({"kind":"setCustomFolder", "folderPath":link}),
+            json!({"kind":"setCustomFiles", "paths":[link.join("private.png")]}),
+            json!({"kind":"setCustomFiles", "paths":[allowed_image, image]}),
+        ] {
+            assert!(server
+                .json(
+                    "POST",
+                    "/api/invoke/app__background_image_configure",
+                    json!({"input":input})
+                )
+                .await
+                .0
+                .is_client_error());
+        }
+    }
+    assert_eq!(std::fs::read(&image).unwrap(), b"synthetic image");
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn folders_create_browse_select_and_upload_without_overwriting() {
     let server = TestServer::new();
     let (status, created) = server

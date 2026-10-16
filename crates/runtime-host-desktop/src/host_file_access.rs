@@ -8,6 +8,7 @@ use vrcx_0_platform::app_paths::AppPaths;
 #[derive(Clone, Default)]
 pub struct HostFileAccess {
     registered_paths: Arc<Mutex<HashSet<PathBuf>>>,
+    restricted_root: Option<PathBuf>,
 }
 
 impl HostFileAccess {
@@ -15,9 +16,32 @@ impl HostFileAccess {
         Self::default()
     }
 
+    /// A browser selection cannot grant access outside its server file area.
+    pub fn restricted_to(root: &Path) -> Result<Self> {
+        Ok(Self {
+            restricted_root: Some(normalize_existing_or_creatable(root)?),
+            ..Self::default()
+        })
+    }
+
+    pub fn ensure_selection_allowed(&self, path: &Path) -> Result<()> {
+        if let Some(root) = &self.restricted_root {
+            let requested = normalize_existing_or_creatable(path)?;
+            if !requested.starts_with(root) {
+                return Err(Error::Custom(
+                    "File access denied outside the Web file area".into(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
     pub fn register_path(&self, path: impl AsRef<Path>) {
         let path = path.as_ref();
         if path.as_os_str().is_empty() {
+            return;
+        }
+        if self.ensure_selection_allowed(path).is_err() {
             return;
         }
 
@@ -42,7 +66,7 @@ impl HostFileAccess {
             ))
         })?;
 
-        if self.is_registered(&requested) || is_under_known_root(&requested, app_paths) {
+        if self.is_allowed(&requested, app_paths) {
             return Ok(());
         }
 
@@ -61,7 +85,7 @@ impl HostFileAccess {
             ))
         })?;
 
-        if self.is_registered(&requested) || is_under_known_root(&requested, app_paths) {
+        if self.is_allowed(&requested, app_paths) {
             return Ok(());
         }
 
@@ -79,6 +103,13 @@ impl HostFileAccess {
         registered
             .iter()
             .any(|allowed| requested == allowed || requested.starts_with(allowed))
+    }
+
+    fn is_allowed(&self, requested: &Path, app_paths: &AppPaths) -> bool {
+        if let Some(root) = &self.restricted_root {
+            return requested.starts_with(root);
+        }
+        self.is_registered(requested) || is_under_known_root(requested, app_paths)
     }
 }
 
