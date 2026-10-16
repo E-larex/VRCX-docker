@@ -527,6 +527,37 @@ pub async fn read(
     headers: HeaderMap,
     Query(query): Query<FileQuery>,
 ) -> Result<Response, ApiError> {
+    read_response(state, headers, query).await
+}
+
+#[derive(Deserialize)]
+pub struct ResourceQuery {
+    #[serde(default)]
+    download: bool,
+}
+
+pub async fn read_resource(
+    State(state): State<WebState>,
+    headers: HeaderMap,
+    axum::extract::Path(path): axum::extract::Path<String>,
+    Query(query): Query<ResourceQuery>,
+) -> Result<Response, ApiError> {
+    read_response(
+        state,
+        headers,
+        FileQuery {
+            path,
+            download: query.download,
+        },
+    )
+    .await
+}
+
+async fn read_response(
+    state: WebState,
+    headers: HeaderMap,
+    query: FileQuery,
+) -> Result<Response, ApiError> {
     require_auth(&state, &headers)?;
     let path = state
         .files

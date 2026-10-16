@@ -234,6 +234,80 @@ async fn background_sources_cannot_grant_access_outside_web_files() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn resource_urls_keep_versions_separate_from_paths_and_enforce_access() {
+    let server = TestServer::new();
+    let path = server.state.files.allocate("背景 ?#%.png").unwrap();
+    std::fs::write(&path, b"synthetic image bytes").unwrap();
+    let url = format!(
+        "/api/files/read/{}?v=cache-key&download=true",
+        url::form_urlencoded::byte_serialize(path.to_str().unwrap().as_bytes())
+            .collect::<String>()
+            .replace('+', "%20")
+    );
+    let response = server
+        .router
+        .clone()
+        .oneshot(
+            Request::get(&url)
+                .header("cookie", &server.cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(response.headers()[header::CONTENT_DISPOSITION]
+        .as_bytes()
+        .starts_with(b"attachment;"));
+    assert_eq!(
+        response.headers()["content-security-policy"],
+        "sandbox; default-src 'none'"
+    );
+    assert_eq!(
+        response
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .as_ref(),
+        b"synthetic image bytes"
+    );
+    assert_eq!(
+        server
+            .send(
+                "GET",
+                &url,
+                "application/json",
+                String::new(),
+                TestAuth::MissingCookie
+            )
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    let private = server.data.join("private.txt");
+    std::fs::write(&private, "private").unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&private, server.state.files.root.join("link")).unwrap();
+    for path in [
+        private,
+        server.state.files.root.join("../private.txt"),
+        server.state.files.root.join("link"),
+    ] {
+        let url = format!(
+            "/api/files/read/{}",
+            url::form_urlencoded::byte_serialize(path.to_str().unwrap().as_bytes())
+                .collect::<String>()
+        );
+        assert_eq!(
+            server.json("GET", &url, Value::Null).await.0,
+            StatusCode::NOT_FOUND
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn folders_create_browse_select_and_upload_without_overwriting() {
     let server = TestServer::new();
     let (status, created) = server

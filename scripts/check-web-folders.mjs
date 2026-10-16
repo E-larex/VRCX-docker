@@ -112,6 +112,15 @@ try {
                             window.selectedPath = null;
                             void invoke('app__open_folder_selector_dialog', {defaultPath}).then(path => window.selectedPath = path);
                         };
+                        window.chooseBackground = async () => {
+                            const { chooseBackgroundImageFiles } = await import('/src/services/background-image/backgroundImageService.ts');
+                            const { useBackgroundImageStore } = await import('/src/state/backgroundImageStore.ts');
+                            await chooseBackgroundImageFiles();
+                            const image = new Image();
+                            image.id = 'uploaded-background';
+                            image.src = useBackgroundImageStore.getState().snapshot.imageUrl;
+                            document.body.append(image);
+                        };
                         </script></body></html>`);
                         }
                     );
@@ -233,8 +242,44 @@ try {
     );
     await page.keyboard.press('Escape');
     assert.equal(await selected(), '');
+
+    // Exercise the real background service, including its appended cache version.
+    const png = await page.evaluate(() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 2;
+        return canvas.toDataURL('image/png').split(',')[1];
+    });
+    const backgroundChooser = page.waitForEvent('filechooser');
+    await page.evaluate(() => {
+        void window.chooseBackground();
+    });
+    await (
+        await backgroundChooser
+    ).setFiles({
+        name: '背景 ?#%.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from(png, 'base64')
+    });
+    await page.locator('#uploaded-background').waitFor({ state: 'attached' });
+    await page.waitForFunction(
+        () => document.querySelector('#uploaded-background').complete
+    );
+    assert.equal(
+        await page
+            .locator('#uploaded-background')
+            .evaluate((image) => image.naturalWidth),
+        2
+    );
+    const imageUrl = await page
+        .locator('#uploaded-background')
+        .getAttribute('src');
+    const download = await context.request.get(
+        `${origin}${imageUrl}&download=true`
+    );
+    assert.equal(download.status(), 200);
+    assert.match(download.headers()['content-disposition'], /^attachment;/);
     console.log(
-        'PASS: named creation, conflicts, nested upload, browsing, selection, cancellation and restart persistence (synthetic credentials).'
+        'PASS: folders, restart persistence, uploaded background rendering and download (synthetic credentials).'
     );
 } finally {
     await browser?.close();

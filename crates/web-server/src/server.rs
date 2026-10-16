@@ -215,6 +215,7 @@ pub fn router(state: WebState) -> Router {
         )
         .route("/api/files/reserve", post(crate::files::reserve))
         .route("/api/files/read", get(crate::files::read))
+        .route("/api/files/read/{*path}", get(crate::files::read_resource))
         .route("/api/files/list", get(crate::files::list))
         .route("/api/files/ready", get(crate::files::ready))
         .route(

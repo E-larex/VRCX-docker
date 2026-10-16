@@ -4,7 +4,8 @@ import { request, logoutWebsite } from './http';
 export type InvokeArgs = Record<string, unknown>;
 export const isTauri = () => false;
 export function convertFileSrc(path: string, _protocol?: string): string {
-    return `/api/files/read?path=${encodeURIComponent(path)}`;
+    // Upstream consumers append query parameters such as ?v= for cache versions.
+    return `/api/files/read/${encodeURIComponent(path)}`;
 }
 function downloadBlob(content: BlobPart, name: string, type: string): string {
     const url = URL.createObjectURL(new Blob([content], { type }));
@@ -79,7 +80,7 @@ async function watchDownload(path: string): Promise<void> {
         );
         if (!result.ready) continue;
         const link = document.createElement('a');
-        link.href = `${convertFileSrc(path)}&download=true`;
+        link.href = `${convertFileSrc(path)}?download=true`;
         link.download = '';
         link.click();
         return;
@@ -89,7 +90,7 @@ async function watchDownload(path: string): Promise<void> {
 async function openResource(path: string, folder: boolean): Promise<void> {
     if (!folder) {
         const link = document.createElement('a');
-        link.href = `${convertFileSrc(path)}&download=true`;
+        link.href = `${convertFileSrc(path)}?download=true`;
         link.download = '';
         link.click();
         return;
@@ -109,7 +110,7 @@ async function openResource(path: string, folder: boolean): Promise<void> {
         const link = document.createElement('a');
         link.className = 'text-primary block py-2 underline';
         link.textContent = file.name;
-        link.href = `${convertFileSrc(file.path)}&download=true`;
+        link.href = `${convertFileSrc(file.path)}?download=true`;
         link.download = '';
         dialog.append(link);
     }
