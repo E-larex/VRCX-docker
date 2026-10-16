@@ -42,6 +42,7 @@ vrcx-0-runtime-host-desktop = { path = "../runtime-host-desktop", features = ["w
 vrcx-0-local-server = { path = "../local-server" }
 
 [build-dependencies]
+serde_json.workspace = true
 syn = { version = "2", features = ["full", "visit-mut"] }
 quote = "1"
 proc-macro2 = "1"

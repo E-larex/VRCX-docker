@@ -3,6 +3,7 @@
 use heck::ToLowerCamelCase;
 use quote::{format_ident, quote};
 use std::{
+    collections::BTreeMap,
     env, fs,
     path::{Path, PathBuf},
 };
@@ -12,7 +13,9 @@ fn main() {
     let source =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("../../src-tauri/src/commands");
     let mut routes = Vec::new();
-    let modules = module(&source.join("mod.rs"), &[], &mut routes);
+    let mut manifest = BTreeMap::new();
+    let modules = module(&source.join("mod.rs"), &[], &mut routes, &mut manifest);
+    check_command_manifest(&manifest);
     let output = quote! {
         #modules
         pub async fn dispatch(state: std::sync::Arc<crate::state::AppState>, command: &str, args: serde_json::Value) -> Result<serde_json::Value, crate::error::AppError> {
@@ -27,6 +30,39 @@ fn main() {
         output.to_string(),
     )
     .unwrap();
+}
+
+fn check_command_manifest(actual: &BTreeMap<String, String>) {
+    let manifest_path =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("commands.json");
+    println!("cargo:rerun-if-changed={}", manifest_path.display());
+    println!("cargo:rerun-if-env-changed=VRCX_WEB_UPDATE_COMMAND_MANIFEST");
+    if env::var("VRCX_WEB_UPDATE_COMMAND_MANIFEST").as_deref() == Ok("1") {
+        fs::write(
+            &manifest_path,
+            format!("{}\n", serde_json::to_string_pretty(actual).unwrap()),
+        )
+        .unwrap();
+        return;
+    }
+    let approved: BTreeMap<String, String> = serde_json::from_str(
+        &fs::read_to_string(&manifest_path).expect("Missing reviewed Web command manifest"),
+    )
+    .expect("Invalid reviewed Web command manifest");
+    let mut changes = Vec::new();
+    for (name, signature) in actual {
+        match approved.get(name) {
+            None => changes.push(format!("added: {name}")),
+            Some(previous) if previous != signature => changes.push(format!("changed: {name}")),
+            _ => {}
+        }
+    }
+    for name in approved.keys() {
+        if !actual.contains_key(name) {
+            changes.push(format!("removed: {name}"));
+        }
+    }
+    assert!(changes.is_empty(), "Web command manifest requires review:\n{}\nReview desktop dependencies and file access, then run VRCX_WEB_UPDATE_COMMAND_MANIFEST=1 cargo check --locked -p vrcx-0-web and commit commands.json. See DEVELOPMENT.md.", changes.join("\n"));
 }
 
 fn selected(path: &[String]) -> bool {
@@ -66,6 +102,7 @@ fn module(
     file: &Path,
     path: &[String],
     routes: &mut Vec<proc_macro2::TokenStream>,
+    manifest: &mut BTreeMap<String, String>,
 ) -> proc_macro2::TokenStream {
     println!("cargo:rerun-if-changed={}", file.display());
     let source = fs::read_to_string(file).unwrap();
@@ -97,7 +134,7 @@ fn module(
                 } else {
                     base.join(m.ident.to_string()).join("mod.rs")
                 };
-                let body = module(&child_file, &child, routes);
+                let body = module(&child_file, &child, routes, manifest);
                 let name = &m.ident;
                 items.push(quote! { pub mod #name { #body } });
                 continue;
@@ -111,6 +148,12 @@ fn module(
             f.attrs.retain(|a| !a.path().is_ident("web_command"));
             if command {
                 let name = f.sig.ident.clone();
+                let signature = &f.sig;
+                let description = format!("{}: {}", path.join("/"), quote!(#signature));
+                assert!(
+                    manifest.insert(name.to_string(), description).is_none(),
+                    "Duplicate Web command: {name}"
+                );
                 let wrapper = format_ident!("web_{}", name);
                 let mut fields = Vec::new();
                 let mut arguments = Vec::new();

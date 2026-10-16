@@ -26,6 +26,8 @@ For frontend hot reload, run `npm run dev:web` on port 9000. The API proxy prese
 
 When merging an upstream tag, check the command selection in `crates/web-server/build.rs`, newly added desktop UI entries, and `web-host` guards. Build desktop and web packages separately to prevent Cargo feature unification from enabling `web-host` on the desktop build.
 
+`crates/web-server/commands.json` records the reviewed generated command names, modules, and signatures. Normal Web builds fail if a command is added, removed, moved, or changes signature. After reviewing each difference for desktop dependencies and server file access, run `VRCX_WEB_UPDATE_COMMAND_MANIFEST=1 cargo check --locked -p vrcx-0-web`, inspect the manifest diff, and commit it with the adaptation. Run the normal build again without that variable. Body-only changes still require review; the manifest does not replace it. Handwritten routes and command overrides in `server.rs` remain separately maintained.
+
 ```sh
 npm run typecheck
 npm run lint
