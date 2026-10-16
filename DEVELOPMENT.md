@@ -36,6 +36,8 @@ cargo test --locked -p vrcx-0-web
 docker compose -f compose.example.yaml -f compose.build.yaml build
 ```
 
+`Dockerfile.web` uses a pinned [cargo-chef](https://github.com/LukeMathWalker/cargo-chef) version to build Rust dependencies in a separate layer before copying application sources. Source-only edits reuse that layer through the existing Docker/CI layer cache; dependency manifests, the lockfile, Cargo configuration, and toolchain changes invalidate it. The runtime image still contains only the service, static assets, licenses, and runtime system packages.
+
 Automated checks cover website authentication, origin validation, original database commands, desktop capability restrictions, and file access boundaries. Real VRChat account login, two-factor verification, long-running events, and third-party Webhook delivery still require acceptance testing with actual accounts and endpoints.
 
 After building the Web frontend and debug server, run `node scripts/check-web-folders.mjs` to check folder naming, uploads, selection, custom background rendering/downloads, and persistence across a server restart in Chromium. The script starts isolated local services with temporary storage and synthetic website credentials, then removes its test data. Playwright and Chromium must be installed; `VRCX_TEST_PLAYWRIGHT_MODULE` can specify an external Playwright module and `VRCX_TEST_CHROMIUM` can specify the browser executable.

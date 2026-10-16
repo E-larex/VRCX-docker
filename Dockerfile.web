@@ -5,9 +5,25 @@ RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY . .
 RUN npm exec vite -- build --mode web
 
-FROM rust:1.97-bookworm AS backend
+FROM rust:1.97-bookworm AS rust-tools
 RUN apt-get update && apt-get install -y --no-install-recommends libfontconfig1-dev cmake clang && rm -rf /var/lib/apt/lists/*
+RUN cargo install --locked cargo-chef --version 0.1.78
 WORKDIR /src
+
+FROM rust-tools AS planner
+COPY Cargo.toml Cargo.lock ./
+COPY .cargo .cargo
+COPY crates crates
+COPY src-tauri src-tauri
+RUN cargo chef prepare --recipe-path /recipe.json
+
+FROM rust-tools AS dependencies
+COPY --from=planner /recipe.json /recipe.json
+COPY .cargo .cargo
+# This layer survives source-only edits and is exportable by the CI layer cache.
+RUN cargo chef cook --release --locked -p vrcx-0-web --recipe-path /recipe.json
+
+FROM dependencies AS backend
 COPY Cargo.toml Cargo.lock ./
 COPY .cargo .cargo
 COPY crates crates
