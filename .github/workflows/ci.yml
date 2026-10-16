@@ -25,6 +25,7 @@ jobs:
             pull-requests: read
         outputs:
             web: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.web }}
+            desktop: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.desktop }}
         steps:
             - uses: actions/checkout@v7
             - uses: dorny/paths-filter@v4
@@ -32,6 +33,13 @@ jobs:
               id: filter
               with:
                   filters: |
+                      desktop:
+                        - '.cargo/**'
+                        - '.github/actions/**'
+                        - '.github/workflows/ci.yml'
+                        - 'Cargo.toml'
+                        - 'Cargo.lock'
+                        - 'crates/**'
                       web:
                         - '.cargo/**'
                         - '.dockerignore'
@@ -100,6 +108,26 @@ jobs:
             - run: cargo fmt --all -- --check
             - run: cargo clippy --locked -p vrcx-0-web --all-targets --no-deps -- -D warnings
             - run: cargo test --locked -p vrcx-0-web
+            - uses: ./.github/actions/check-web-browser
+
+    desktop:
+        name: Desktop Runtime Compatibility
+        needs: changes
+        if: needs.changes.outputs.desktop == 'true'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
+            - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev cmake clang
+            - uses: dtolnay/rust-toolchain@1.97.0
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  shared-key: ci-desktop-runtime
+                  save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+            # A separate Cargo invocation keeps web-host out of desktop features.
+            - run: cargo check --locked -p vrcx-0-runtime-host-desktop
 
     docker:
         name: Web Docker Build and Startup
@@ -132,13 +160,15 @@ jobs:
                   cache-to: type=gha,scope=ci-web-amd64,mode=max
             - name: Test container startup with isolated data
               run: bash scripts/smoke-web-image.sh vrcx-0-web:ci
+            - name: Test LAN authentication and persistence after recreation
+              run: bash scripts/check-web-lan-image.sh vrcx-0-web:ci
 
     ci-success:
         name: CI Success
         runs-on: ubuntu-24.04
         timeout-minutes: 5
         if: always()
-        needs: [changes, frontend, rust, docker]
+        needs: [changes, frontend, rust, desktop, docker]
         steps:
             - name: Verify all required checks completed
               env:
@@ -156,6 +186,10 @@ jobs:
                       const expected = web === 'true' ? 'success' : 'skipped';
                       if (checks[job].result !== expected) failures.push(`${job}: ${checks[job].result} (expected ${expected})`);
                   }
+                  const desktop = checks.changes.outputs.desktop;
+                  if (desktop !== 'true' && desktop !== 'false') failures.push('Desktop change detection did not return a valid result');
+                  const desktopExpected = desktop === 'true' ? 'success' : 'skipped';
+                  if (checks.desktop.result !== desktopExpected) failures.push(`desktop: ${checks.desktop.result} (expected ${desktopExpected})`);
                   if (failures.length) {
                       console.error(failures.join('\n'));
                       process.exit(1);

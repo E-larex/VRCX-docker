@@ -14,7 +14,7 @@ Replace the example with an unpublished version. `2.32.0` identifies the upstrea
 
 For the first beta of a Web revision, use `v2.32.0-web.1-beta.1` in both commands above. Further test releases increment `beta.M`; the stable release drops the beta suffix. Tag the commit containing the release workflow changes, not an earlier commit.
 
-Release runs frontend lint, type checking and tests, plus isolated Web Rust tests. It then builds the `linux/amd64` image, checks initialization, non-root execution, static content and `/health` using a temporary data volume, and pushes that same tested image to GHCR. No real VRChat credentials are used; the health check does not verify VRChat login or third-party integrations.
+Release runs frontend lint, type checking and tests, isolated Web Rust tests, a separate desktop runtime check with default features, and the browser checks described in [DEVELOPMENT.md](DEVELOPMENT.md#continuous-integration). It then builds the `linux/amd64` image, checks initialization, non-root execution, static content and `/health`, and runs LAN authentication and persistence checks across container recreation using temporary data volumes. Only that tested image is pushed to GHCR. No real VRChat credentials are used; the health check does not verify VRChat login or third-party integrations.
 
 Images receive the Git tag without its leading `v`, `sha-<full-commit>` and a channel tag:
 

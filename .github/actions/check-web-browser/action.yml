@@ -1,0 +1,20 @@
+name: Check Web browser behavior
+description: Build the Web application and exercise it with isolated data and synthetic credentials.
+
+runs:
+    using: composite
+    steps:
+        - uses: ./.github/actions/setup-node
+          with:
+              node-version: 26.x
+        - name: Install Chromium
+          run: npm exec playwright -- install --with-deps chromium
+          shell: bash
+        - name: Build the browser test application
+          run: |
+              npm run build:web
+              cargo build --locked -p vrcx-0-web
+          shell: bash
+        - name: Test authentication, files, backgrounds and About surfaces
+          run: npm run test:web:browser
+          shell: bash
