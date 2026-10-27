@@ -22,8 +22,9 @@ use crate::config::{
     HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY, HMD_NOTIFICATION_AVATARS_CONFIG_KEY,
     HMD_NOTIFICATION_OPACITY_CONFIG_KEY, HMD_NOTIFICATION_POSITION_CONFIG_KEY,
     HMD_NOTIFICATION_START_MODE_CONFIG_KEY, HMD_NOTIFICATION_STYLE_CONFIG_KEY,
-    VR_OVERLAY_HIDE_PRIVATE_WORLDS_CONFIG_KEY,
+    HMD_NOTIFICATION_TRACKER_DISCONNECT_CONFIG_KEY, VR_OVERLAY_HIDE_PRIVATE_WORLDS_CONFIG_KEY,
 };
+use crate::tracker_watch::TrackerDisconnect;
 use crate::VrOverlayRuntimeServices;
 use vrcx_0_host_desktop::vr_overlay::OverlayPlacement;
 
@@ -77,6 +78,10 @@ impl VrOverlayRuntimeServices for TestServices {
 
     fn now_playing(&self) -> NowPlayingSnapshot {
         NowPlayingSnapshot::default()
+    }
+
+    fn game_started_at(&self) -> Option<String> {
+        None
     }
 }
 
@@ -160,6 +165,18 @@ fn hmd_avatars_have_their_own_switch_that_defaults_on() {
         .unwrap();
     runtime.reconcile_current();
     assert!(!runtime.current_runtime_config().hmd.avatars);
+}
+
+#[test]
+fn hmd_tracker_disconnect_alerts_default_on_and_can_be_turned_off() {
+    let (_dir, config, runtime) = test_runtime();
+    assert!(runtime.current_runtime_config().hmd.tracker_disconnect);
+
+    config
+        .set_bool(HMD_NOTIFICATION_TRACKER_DISCONNECT_CONFIG_KEY, false)
+        .unwrap();
+    runtime.reconcile_current();
+    assert!(!runtime.current_runtime_config().hmd.tracker_disconnect);
 }
 
 #[test]
@@ -319,5 +336,57 @@ fn hmd_toasts_follow_the_router_hmd_flag_and_the_hmd_switch() {
         .unwrap();
     runtime.reconcile_current();
     runtime.ingest_hmd_delivery(delivery("hmd-switched-off", true));
+    assert_eq!(queued(), 0);
+}
+
+#[test]
+fn tracker_disconnect_toasts_follow_their_own_switch_and_the_hmd_switch() {
+    let (_dir, config, _) = test_runtime();
+    config
+        .set_bool(HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY, true)
+        .unwrap();
+    config
+        .set_string(HMD_NOTIFICATION_START_MODE_CONFIG_KEY, "steamvr")
+        .unwrap();
+    let services: Arc<dyn VrOverlayRuntimeServices> = Arc::new(TestServices {
+        config: config.clone(),
+        web: Arc::new(WebClient::new(NoopWebClientPort)),
+        auth_scope: RuntimeAuthScope::new(),
+        world_cache: Arc::new(WorldCache::new(MemoryWorldCachePort::default())),
+        tasks: TaskSupervisor::new(),
+        activity_router: ActivityRouter::new(),
+    });
+    let runtime = Arc::new(VrOverlayRuntime::new_with_frame_producer_factory(
+        true,
+        Some(Arc::clone(&services)),
+        load_runtime_config(services.as_ref()),
+        Box::new(|| Box::<StaticWristFrameProducer>::default()),
+    ));
+    runtime.update_process_status(true, true);
+    let disconnect = TrackerDisconnect {
+        count: 1,
+        battery_percent: Some(12),
+    };
+    let queued = || runtime.hmd_toasts.lock().unwrap().len();
+
+    runtime.deliver_tracker_disconnect_toast(disconnect);
+    assert_eq!(queued(), 1);
+
+    runtime.clear_hmd_notifications();
+    config
+        .set_bool(HMD_NOTIFICATION_TRACKER_DISCONNECT_CONFIG_KEY, false)
+        .unwrap();
+    runtime.reconcile_current();
+    runtime.deliver_tracker_disconnect_toast(disconnect);
+    assert_eq!(queued(), 0);
+
+    config
+        .set_bool(HMD_NOTIFICATION_TRACKER_DISCONNECT_CONFIG_KEY, true)
+        .unwrap();
+    config
+        .set_bool(HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY, false)
+        .unwrap();
+    runtime.reconcile_current();
+    runtime.deliver_tracker_disconnect_toast(disconnect);
     assert_eq!(queued(), 0);
 }

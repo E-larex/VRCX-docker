@@ -3,6 +3,7 @@ import type {
     AncillaryRuntimeSnapshot,
     BackendRuntimeCombinedSnapshot
 } from '@/platform/tauri/bindings';
+import vrchatEconomyRepository from '@/repositories/vrchatEconomyRepository';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -117,6 +118,14 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
     if (event.name === 'friendProfileLoadStatus') {
         runtimeStore.recordRuntimeEvent(event.name, event.payload);
         applyFriendProfileLoadStatusPayload(event.payload);
+        return;
+    }
+
+    if (event.name === 'realtimeEconomyBalance') {
+        vrchatEconomyRepository.setBalance(
+            event.payload.userId,
+            event.payload.walletBalance
+        );
         return;
     }
 
@@ -514,6 +523,7 @@ export async function bindRuntimeEvents(): Promise<() => void> {
         'realtimeCurrentUserProjection',
         'realtimeInstanceClosedProjection',
         'realtimeInstanceQueueProjection',
+        'realtimeEconomyBalance',
         'realtimeProjectionSync',
         'updateIsGameRunning',
         'integrationApiStartFailed',

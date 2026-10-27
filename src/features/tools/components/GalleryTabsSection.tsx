@@ -32,6 +32,7 @@ export function GalleryTabsSection({
     const {
         onActiveTabChange,
         onBeginUpload,
+        onPasteUpload,
         onClearProfileField,
         onDeleteFile,
         onDeletePrint,
@@ -53,12 +54,14 @@ export function GalleryTabsSection({
                 uploadingTab,
                 mutatingKey,
                 currentUserId,
+                isVrcPlusSupporter,
                 bannerCustomUrl,
                 mediaProfileLoading,
                 mediaProfileError,
                 userIcon,
                 gridDensityConfig,
                 onBeginUpload,
+                onPasteUpload,
                 onClearProfileField,
                 onPreview,
                 onSetProfileField,
@@ -75,6 +78,7 @@ export function GalleryTabsSection({
                 gridDensityConfig,
                 onRefresh,
                 onBeginUpload,
+                onPasteUpload,
                 onPreview,
                 onDeletePrint
             }}

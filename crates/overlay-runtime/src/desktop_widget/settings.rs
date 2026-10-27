@@ -11,6 +11,7 @@ const DESKTOP_WIDGET_CONFIG_KEY_PREFIX: &str = "desktopWidget";
 
 pub fn is_desktop_widget_config_key(key: &str) -> bool {
     resolve_config_key(key).starts_with(&resolve_config_key(DESKTOP_WIDGET_CONFIG_KEY_PREFIX))
+        || crate::config::is_localizer_config_key(key)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

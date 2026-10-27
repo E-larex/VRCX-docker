@@ -171,7 +171,6 @@ export function GameLogPage({ embedded = false }: { embedded?: boolean } = {}) {
                         pageCount={pageCount}
                         pageSizes={tableState.pageSizes}
                         setPagination={tableState.setPagination}
-                        setSessionLimit={tableState.setSessionLimit}
                     />
                 ) : (
                     <GameLogEmptyState

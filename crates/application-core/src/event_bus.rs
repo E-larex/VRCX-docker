@@ -7,8 +7,9 @@ use vrcx_0_contracts::{runtime_event_payload, RuntimeEventPayload};
 use crate::backend_runtime::{BackendRuntimeTelemetry, RealtimeProjectionSync};
 use crate::events::{
     FriendProfileLoadStatusPayload, FriendProjection, PrintAutoCleanupEvent,
-    RealtimeCurrentUserProjection, RealtimeEntryCorrection, RealtimeInstanceClosedProjection,
-    RealtimeInstanceQueueProjection, RealtimeNotificationProjection, RealtimeUserProjection,
+    RealtimeCurrentUserProjection, RealtimeEconomyBalancePayload, RealtimeEntryCorrection,
+    RealtimeInstanceClosedProjection, RealtimeInstanceQueueProjection,
+    RealtimeNotificationProjection, RealtimeUserProjection,
 };
 use crate::ports::HostSessionProjection;
 use crate::{FavoriteChangeScope, FavoriteEntityKind, RuntimeAuthScopeSnapshot};
@@ -168,6 +169,7 @@ runtime_event_payload!(
 );
 runtime_event_payload!(HostSessionProjection, "updateIsGameRunning");
 runtime_event_payload!(PrintAutoCleanupEvent, "printsAutoCleanup");
+runtime_event_payload!(RealtimeEconomyBalancePayload, "realtimeEconomyBalance");
 runtime_event_payload!(FriendProfileLoadStatusPayload, "friendProfileLoadStatus");
 
 #[cfg(any(test, feature = "test-utils"))]
@@ -253,6 +255,10 @@ impl RuntimeEventBus {
         &self,
         payload: RealtimeInstanceQueueProjection,
     ) {
+        self.emit(payload);
+    }
+
+    pub fn emit_realtime_economy_balance(&self, payload: RealtimeEconomyBalancePayload) {
         self.emit(payload);
     }
 

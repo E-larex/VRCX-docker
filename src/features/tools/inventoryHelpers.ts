@@ -1,8 +1,9 @@
 import { PROFILE_DECORATION_ITEM_TYPES } from '@/domain/entities/inventory';
-import type {
-    EmojiUploadParams,
-    InventoryItemsCollectInput,
-    MediaFileTag
+import {
+    commands,
+    type EmojiUploadParams,
+    type InventoryItemsCollectInput,
+    type MediaFileTag
 } from '@/platform/tauri/bindings';
 import type { MediaFileRecord } from '@/repositories/vrchatMediaRepository';
 import { toast } from '@/services/toastService';
@@ -11,7 +12,10 @@ import {
     type EmojiAnimationStyleName
 } from '@/shared/constants/emoji';
 import { MAX_IMAGE_UPLOAD_BYTES } from '@/shared/constants/imageUpload';
-import { validateImageUploadFile } from '@/shared/utils/imageUpload';
+import {
+    readDroppedImageFile,
+    validateImageUploadFile
+} from '@/shared/utils/imageUpload';
 
 import { emojiAnimationStyleValues } from './emojiAnimationStyles';
 import {
@@ -326,6 +330,63 @@ export function parseEmojiUploadSettings(
         }
     }
     return next;
+}
+
+export async function readDroppedUploadImage(
+    paths: string[],
+    t: (key: string) => string
+) {
+    const path = paths[0];
+    if (!path) {
+        return null;
+    }
+    try {
+        const result = await readDroppedImageFile(path);
+        if (result.ok) {
+            return result.file;
+        }
+        toast.add({
+            type: 'error',
+            title:
+                result.reason === 'too_large'
+                    ? t('message.file.too_large')
+                    : t('message.file.not_image')
+        });
+    } catch (error) {
+        toast.add({
+            type: 'error',
+            title:
+                error instanceof Error
+                    ? error.message
+                    : t('message.upload.error')
+        });
+    }
+    return null;
+}
+
+export async function readClipboardUploadImage(t: (key: string) => string) {
+    try {
+        const image = await commands.appReadClipboardImage();
+        if (image) {
+            const bytes = Uint8Array.from(atob(image.dataBase64), (char) =>
+                char.charCodeAt(0)
+            );
+            return new File([bytes], image.fileName, { type: image.mimeType });
+        }
+        toast.add({
+            type: 'error',
+            title: t('message.file.clipboard_no_image')
+        });
+    } catch (error) {
+        toast.add({
+            type: 'error',
+            title:
+                error instanceof Error
+                    ? error.message
+                    : t('message.upload.error')
+        });
+    }
+    return null;
 }
 
 export function validateImageFile(file: Blob, t: (key: string) => string) {

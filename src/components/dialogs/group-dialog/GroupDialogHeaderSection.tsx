@@ -2,9 +2,11 @@ import {
     BadgeCheckIcon,
     BellIcon,
     BellOffIcon,
+    CalendarPlusIcon,
     CopyIcon,
     ExternalLinkIcon,
     ImageIcon,
+    KeyRoundIcon,
     LogInIcon,
     LogOutIcon,
     MessageSquareIcon,
@@ -58,7 +60,9 @@ interface GroupHeaderModel {
     canEditProfile: boolean;
     canJoin: boolean;
     canLeave: boolean;
+    canManageCalendar: boolean;
     canManagePosts: boolean;
+    canManageRoles: boolean;
     canModerateGroup: boolean;
     canSetVisibility: boolean;
     detail: string;
@@ -87,6 +91,8 @@ interface GroupHeaderCommands {
     onCopyGroupId: () => void;
     onCopyGroupName: () => void;
     onCopyGroupUrl: () => void;
+    onCreateGroupEvent: () => void;
+    onOpenRoles: () => void;
     onCreateGroupPost: () => void;
     onDelete: () => void;
     onEditProfile: () => void;
@@ -139,7 +145,9 @@ export function GroupDialogHeaderSection({
         canEditProfile,
         canJoin,
         canLeave,
+        canManageCalendar,
         canManagePosts,
+        canManageRoles,
         canModerateGroup,
         canSetVisibility,
         detail,
@@ -167,7 +175,9 @@ export function GroupDialogHeaderSection({
         onCopyGroupId,
         onCopyGroupName,
         onCopyGroupUrl,
+        onCreateGroupEvent,
         onCreateGroupPost,
+        onOpenRoles,
         onDelete,
         onEditProfile,
         onEditProfileMedia,
@@ -429,6 +439,24 @@ export function GroupDialogHeaderSection({
                                     {t('dialog.group.actions.create_post')}
                                 </EntityActionItem>
                             ) : null}
+                            {canManageCalendar ? (
+                                <EntityActionItem
+                                    icon={CalendarPlusIcon}
+                                    onClick={onCreateGroupEvent}
+                                >
+                                    {t('dialog.group.actions.create_event')}
+                                </EntityActionItem>
+                            ) : null}
+                            <EntityActionItem
+                                icon={KeyRoundIcon}
+                                onClick={onOpenRoles}
+                            >
+                                {t(
+                                    canManageRoles
+                                        ? 'dialog.group.actions.manage_roles'
+                                        : 'dialog.group.actions.view_roles'
+                                )}
+                            </EntityActionItem>
                             {canModerateGroup ? (
                                 <EntityActionItem
                                     icon={SettingsIcon}

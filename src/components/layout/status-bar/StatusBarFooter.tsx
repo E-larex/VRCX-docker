@@ -322,7 +322,6 @@ export const StatusBarFooter = forwardRef<HTMLElement, StatusBarFooterProps>(
         const sessionActions = (
             <>
                 <DoNotDisturbMenu />
-                {!isWebHost && <DesktopWidgetToggle />}
                 {!isWebHost && (
                     <Tooltip>
                         <TooltipTrigger
@@ -365,6 +364,7 @@ export const StatusBarFooter = forwardRef<HTMLElement, StatusBarFooterProps>(
                 >
                     {connections}
                     <div className="ml-auto flex shrink-0 items-center">
+                        {!isWebHost && <DesktopWidgetToggle />}
                         {sessionActions}
                     </div>
                 </footer>
@@ -882,6 +882,7 @@ export const StatusBarFooter = forwardRef<HTMLElement, StatusBarFooterProps>(
                                 </TooltipContent>
                             </Tooltip>
                         ) : null}
+                        {!isWebHost && <DesktopWidgetToggle />}
                         <OfflineRecordIndicator />
                         {proxyEnabled ? (
                             <Popover

@@ -67,6 +67,7 @@ function createActions(overrides: Partial<GalleryAssetActionDeps> = {}) {
             getPrints: vi.fn()
         },
         parseEmojiUploadSettings: vi.fn(),
+        readClipboardUploadImage: vi.fn().mockResolvedValue(null),
         readFileAsBase64: vi.fn().mockResolvedValue('base64-body'),
         setAssets: vi.fn(),
         setCropRequest: vi.fn(),
@@ -146,6 +147,80 @@ describe('createGalleryAssetActions', () => {
 
         expect(uploadInputRef.current.click).toHaveBeenCalledTimes(2);
         expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it('opens the crop dialog for an image dropped on the active tab', () => {
+        const setCropRequest = vi.fn();
+        const { actions } = createActions({
+            setCropRequest,
+            validateImageFile: () => true
+        });
+        const file = new File(['image'], 'drop.png', { type: 'image/png' });
+
+        actions.uploadDroppedFile(file);
+
+        expect(setCropRequest).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tab: 'prints',
+                file,
+                authTarget: {
+                    userId: 'usr_self',
+                    endpoint: 'https://api.vrchat.cloud'
+                }
+            })
+        );
+    });
+
+    it('opens the crop dialog for a clipboard image on the requested tab', async () => {
+        const setCropRequest = vi.fn();
+        const file = new File(['image'], 'clipboard.png', {
+            type: 'image/png'
+        });
+        const { actions } = createActions({
+            readClipboardUploadImage: vi.fn().mockResolvedValue(file),
+            setCropRequest,
+            validateImageFile: () => true
+        });
+
+        await actions.pasteClipboardUpload('gallery');
+
+        expect(setCropRequest).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tab: 'gallery',
+                file,
+                authTarget: {
+                    userId: 'usr_self',
+                    endpoint: 'https://api.vrchat.cloud'
+                }
+            })
+        );
+    });
+
+    it('does nothing when the clipboard has no image', async () => {
+        const setCropRequest = vi.fn();
+        const { actions } = createActions({ setCropRequest });
+
+        await actions.pasteClipboardUpload('prints');
+
+        expect(setCropRequest).not.toHaveBeenCalled();
+    });
+
+    it('keeps dropped prints restricted to VRC+ users', () => {
+        const setCropRequest = vi.fn();
+        const { actions, toast } = createActions({
+            isVrcPlusSupporter: false,
+            setCropRequest,
+            validateImageFile: () => true
+        });
+
+        actions.uploadDroppedFile(
+            new File(['image'], 'drop.png', { type: 'image/png' })
+        );
+
+        expect(setCropRequest).not.toHaveBeenCalled();
+        expect(toast.error).toHaveBeenCalledWith(
+            expect.objectContaining({ title: 'message.vrcplus.required' })
+        );
     });
 
     it.each<GalleryUploadTarget>(['prints', 'emojis', 'stickers'])(

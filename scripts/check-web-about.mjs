@@ -292,7 +292,9 @@ try {
             .first()
             .waitFor();
         await page.keyboard.press('Escape');
-        await page.getByRole('dialog').waitFor({ state: 'hidden' });
+        await page.waitForFunction(
+            () => document.querySelectorAll('[role="dialog"]').length === 0
+        );
     }
     await page.evaluate(() => window.setLanguage('en'));
     await page.evaluate(() => window.showDatabaseFailure());

@@ -36,8 +36,10 @@ import {
 import { toast } from '@/services/toastService';
 import { isDevToolsBuild } from '@/shared/buildLabel';
 import { communityThemeControlsAccent } from '@/state/communityThemeStore';
+import { useModalStore } from '@/state/modalStore';
 import type { ThemeMode } from '@/state/shellStore';
 
+import { updateCommunityTheme } from './communityThemeUpdate';
 import { resolveActiveThemeSource, type ThemeSource } from './themeHelpers';
 import { useThemesRuntimeState } from './useThemesRuntimeState';
 
@@ -53,12 +55,14 @@ export function useThemesController() {
         enabled,
         installedTheme,
         installedThemes,
+        updates,
         localPreview,
         localPreviewWatch,
         overrideCssLength,
         loading,
         error
     } = useThemesRuntimeState();
+    const confirm = useModalStore((state) => state.confirm);
     const [overrideDraft, setOverrideDraft] = useState('');
     const [customCssOpen, setCustomCssOpen] = useState(
         Boolean(overrideCssLength)
@@ -177,6 +181,18 @@ export function useThemesController() {
     }
 
     async function deleteTheme(themeId?: string) {
+        const result = await confirm({
+            title: t('view.community_themes.confirm.delete_theme_title'),
+            description: t(
+                'view.community_themes.confirm.delete_theme_description'
+            ),
+            confirmText: t('common.actions.delete'),
+            cancelText: t('common.actions.cancel'),
+            destructive: true
+        });
+        if (!result.ok) {
+            return;
+        }
         try {
             await deleteInstalledCommunityTheme(themeId);
             toast.add({
@@ -192,6 +208,10 @@ export function useThemesController() {
                         : t('view.community_themes.toast.disable_failed')
             });
         }
+    }
+
+    function updateTheme(themeId: string) {
+        void updateCommunityTheme(themeId, t);
     }
 
     async function enableTheme(themeId?: string) {
@@ -231,6 +251,18 @@ export function useThemesController() {
     }
 
     async function clearOverride() {
+        const result = await confirm({
+            title: t('view.community_themes.confirm.clear_override_title'),
+            description: t(
+                'view.community_themes.confirm.clear_override_description'
+            ),
+            confirmText: t('common.actions.clear'),
+            cancelText: t('common.actions.cancel'),
+            destructive: true
+        });
+        if (!result.ok) {
+            return;
+        }
         try {
             await clearCommunityThemeOverrideCss();
             setOverrideDraft('');
@@ -432,6 +464,9 @@ export function useThemesController() {
             theme
         ])
     );
+    const updateByThemeId = new Map(
+        updates.map((update) => [update.themeId, update])
+    );
     const appearanceControlled = activeSource !== 'built-in';
     const customCssBadge = overrideCssLength
         ? t('view.themes.summary.custom_css_on')
@@ -479,6 +514,7 @@ export function useThemesController() {
         installedTheme,
         installedThemes,
         installedThemeById,
+        updateByThemeId,
         localPreview,
         overrideCssLength,
         loading,
@@ -502,6 +538,7 @@ export function useThemesController() {
         disableTheme,
         deleteTheme,
         enableTheme,
+        updateTheme,
         saveOverride,
         clearOverride,
         disableOverride,

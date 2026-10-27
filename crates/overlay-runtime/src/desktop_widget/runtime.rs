@@ -8,7 +8,7 @@ use vrcx_0_vr_overlay::DesktopWidgetRow;
 use super::feed::{DesktopWidgetFeed, DesktopWidgetRowPart, DesktopWidgetTarget};
 use super::settings::{DesktopWidgetBounds, DesktopWidgetSettings};
 use crate::avatar_cache::AvatarBitmapCache;
-use crate::config::{load_app_language, load_localizer};
+use crate::config::load_localizer;
 use crate::surfaces::hmd_toast::unresolved_entry_world_id;
 use crate::VrOverlayRuntimeServices;
 
@@ -142,9 +142,6 @@ impl DesktopWidgetRuntime {
             let Ok(mut inner) = self.inner.lock() else {
                 return;
             };
-            if inner.settings == loaded {
-                return;
-            }
             let previous = state_of(&inner.settings);
             inner.settings = loaded;
             (previous != state_of(&loaded)).then(|| state_of(&loaded))
@@ -214,8 +211,9 @@ impl DesktopWidgetRuntime {
         }
     }
 
+    #[cfg(windows)]
     pub(crate) fn app_language(&self) -> String {
-        load_app_language(&self.config)
+        crate::config::load_app_language(&self.config)
     }
 
     pub fn activate(&self, id: u64, part: DesktopWidgetRowPart) {

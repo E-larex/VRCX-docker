@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import { FileDropOverlay } from '@/components/file-drop/FileDropOverlay';
+import { useFileDropTarget } from '@/components/file-drop/useFileDropTarget';
 import { PageScaffold } from '@/components/layout/PageScaffold';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader';
 import { convertFileSrc } from '@/platform/tauri/assets';
@@ -26,17 +27,18 @@ import {
 import { ScreenshotSearchResultsView } from './components/ScreenshotSearchResultsView';
 import {
     buildScreenshotSearchRow,
-    getDroppedScreenshotPath,
     normalizeScreenshotMetadata,
     normalizeScreenshotSearchResult,
     resolvePathAfterScreenshotDelete,
     searchResultToLibraryImage,
+    SCREENSHOT_FAVORITES_FOLDER,
     SCREENSHOT_METADATA_SEARCH_TYPES,
     sortScreenshotRowsByNewest,
     type ScreenshotMetadataSearchType
 } from './screenshotMetadataValues';
 import { useScreenshotBrowseSelection } from './useScreenshotBrowseSelection';
 import { useScreenshotBulkDelete } from './useScreenshotBulkDelete';
+import { useScreenshotFavorites } from './useScreenshotFavorites';
 import { useScreenshotGalleryController } from './useScreenshotGalleryController';
 import { useScreenshotMetadataNavigation } from './useScreenshotMetadataNavigation';
 import { useScreenshotMetadataSearch } from './useScreenshotMetadataSearch';
@@ -129,9 +131,30 @@ export function ScreenshotMetadataPage() {
         screenshotCacheStatus,
         setSearchParams
     });
+    const {
+        favoriteImages,
+        favoritePaths,
+        forgetFavoritePaths,
+        forgetMissingFavorites,
+        isLoading: isFavoritesLoading,
+        missingCount: favoritesMissingCount,
+        reloadFavorites,
+        setFavorite
+    } = useScreenshotFavorites(Boolean(screenshotCacheStatus?.available));
+    const lastScanAt = scanStatus?.lastScanAt;
+    useEffect(() => {
+        if (lastScanAt) {
+            void reloadFavorites();
+        }
+    }, [lastScanAt, reloadFavorites]);
+    const isFavoritesFolder =
+        selectedGalleryFolder === SCREENSHOT_FAVORITES_FOLDER;
+    const browseImages = isFavoritesFolder
+        ? favoriteImages
+        : visibleGalleryImages;
     const visibleGalleryImagePaths = useMemo(
-        () => visibleGalleryImages.map((image) => image.path),
-        [visibleGalleryImages]
+        () => browseImages.map((image) => image.path),
+        [browseImages]
     );
     const browseSelection = useScreenshotBrowseSelection(
         visibleGalleryImagePaths
@@ -141,6 +164,7 @@ export function ScreenshotMetadataPage() {
         removeDeletedImages: (paths) => {
             removeGalleryImages(paths);
             removeSearchPaths(paths);
+            forgetFavoritePaths(paths);
             browseSelection.removePaths(paths);
         },
         refreshGalleryTree
@@ -439,6 +463,7 @@ export function ScreenshotMetadataPage() {
 
         try {
             await commands.appDeleteScreenshotFile(filePath);
+            forgetFavoritePaths([filePath]);
             toast.add({
                 type: 'success',
                 title: t('message.screenshot_metadata.file_deleted')
@@ -458,6 +483,26 @@ export function ScreenshotMetadataPage() {
             });
         } finally {
             setIsDeletingFile(false);
+        }
+    }
+
+    async function confirmForgetMissingFavorites() {
+        const result = await confirm({
+            title: t(
+                'dialog.screenshot_metadata.forget_missing_favorites_confirm_title'
+            ),
+            description: t(
+                'dialog.screenshot_metadata.forget_missing_favorites_confirm_description',
+                { count: favoritesMissingCount }
+            ),
+            confirmText: t(
+                'dialog.screenshot_metadata.forget_missing_favorites'
+            ),
+            cancelText: t('common.actions.cancel'),
+            destructive: true
+        });
+        if (result.ok) {
+            await forgetMissingFavorites();
         }
     }
 
@@ -585,28 +630,13 @@ export function ScreenshotMetadataPage() {
         runSearch(nextType);
     }
 
-    async function handleScreenshotDrop(event: DragEvent<HTMLDivElement>) {
-        event.preventDefault();
-        const filePath = getDroppedScreenshotPath(event);
-        if (!filePath) {
-            toast.add({
-                type: 'error',
-                title: t(
-                    'view.tools.error.dropped_screenshot_path_is_not_available'
-                )
-            });
-            return;
+    const fileDropActive = useFileDropTarget({
+        enabled: Boolean(screenshotCacheStatus?.available),
+        onDrop: (paths) => {
+            resetSearchContext({ clearQuery: true });
+            openDetailPath(paths[0]);
         }
-        resetSearchContext({ clearQuery: true });
-        openDetailPath(filePath);
-    }
-
-    function handleScreenshotDragOver(event: DragEvent<HTMLDivElement>) {
-        event.preventDefault();
-        if (event.dataTransfer) {
-            event.dataTransfer.dropEffect = 'copy';
-        }
-    }
+    });
 
     if (!screenshotCacheStatus?.available) {
         return (
@@ -686,8 +716,12 @@ export function ScreenshotMetadataPage() {
             ) : isGalleryMode ? (
                 <ScreenshotGalleryView
                     folderTree={folderTree}
-                    images={visibleGalleryImages}
-                    isImagesLoading={shouldShowGalleryImagesLoading}
+                    images={browseImages}
+                    isImagesLoading={
+                        isFavoritesFolder
+                            ? isFavoritesLoading && favoriteImages.length === 0
+                            : shouldShowGalleryImagesLoading
+                    }
                     isTreeLoading={isGalleryTreeLoading && !folderTree}
                     error={
                         galleryScanError ||
@@ -714,6 +748,17 @@ export function ScreenshotMetadataPage() {
                     isDeleteRunning={bulkDeleteRunning}
                     restoreScrollTop={selectedGalleryScrollTop}
                     selection={browseSelection}
+                    favorites={{
+                        paths: favoritePaths,
+                        count: favoriteImages.length,
+                        missingCount: favoritesMissingCount,
+                        onToggle: (path, favorite) => {
+                            void setFavorite(path, favorite);
+                        },
+                        onForgetMissing: () => {
+                            void confirmForgetMissingFavorites();
+                        }
+                    }}
                 />
             ) : (
                 <>
@@ -738,6 +783,16 @@ export function ScreenshotMetadataPage() {
                         }}
                         onDeleteFile={() => {
                             deleteScreenshotFile();
+                        }}
+                        isFavorite={favoritePaths.has(metadata?.filePath || '')}
+                        onToggleFavorite={() => {
+                            const filePath = metadata?.filePath;
+                            if (filePath) {
+                                void setFavorite(
+                                    filePath,
+                                    !favoritePaths.has(filePath)
+                                );
+                            }
                         }}
                     />
 
@@ -774,10 +829,6 @@ export function ScreenshotMetadataPage() {
                                     sourcePath: metadata?.filePath || ''
                                 })
                             }
-                            onDragOver={handleScreenshotDragOver}
-                            onDrop={(event) => {
-                                handleScreenshotDrop(event);
-                            }}
                         />
 
                         {isDetailsVisible ? (
@@ -793,6 +844,11 @@ export function ScreenshotMetadataPage() {
                     </div>
                 </>
             )}
+
+            <FileDropOverlay
+                active={fileDropActive}
+                label={t('view.tools.file_drop.open_screenshot')}
+            />
         </PageScaffold>
     );
 }

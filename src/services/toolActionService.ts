@@ -35,6 +35,8 @@ type ToolDialogHostKey =
     | 'exportFriendsListOpen'
     | 'exportAvatarsListOpen'
     | 'editInviteMessagesOpen'
+    | 'moderationReportsOpen'
+    | 'purchaseHistoryOpen'
     | 'llmEndpointsOpen'
     | 'profileBackupOpen'
     | 'offlineRecordOpen';
@@ -59,6 +61,8 @@ const toolDialogHostMap: Record<ToolDialogKey, ToolDialogHostKey> = {
     'export-friends-list': 'exportFriendsListOpen',
     'export-avatars-list': 'exportAvatarsListOpen',
     'edit-invite-messages': 'editInviteMessagesOpen',
+    'moderation-reports': 'moderationReportsOpen',
+    'purchase-history': 'purchaseHistoryOpen',
     'llm-endpoints': 'llmEndpointsOpen',
     'profile-backup': 'profileBackupOpen',
     'offline-record': 'offlineRecordOpen'

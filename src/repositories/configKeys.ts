@@ -168,6 +168,7 @@ export const ConfigKeys = defineConfigKeys({
     desktopNotificationAvatars: { type: 'bool', default: true },
     notificationDoNotDisturbEndOnGameStart: { type: 'bool', default: true },
     busyStatusDoNotDisturb: { type: 'bool', default: true },
+    hideVideoErrorNotifications: { type: 'bool', default: false },
     notificationLayout: { type: 'string', default: null },
     notificationTTS: { type: 'string', default: 'Never' },
     notificationTTSVoiceNative: { type: 'string', default: '' },
@@ -190,6 +191,7 @@ export const ConfigKeys = defineConfigKeys({
     hmdNotificationPosition: { type: 'string', default: 'bottom' },
     hmdNotificationStyle: { type: 'string', default: 'standard' },
     hmdNotificationAvatars: { type: 'bool', default: true },
+    hmdNotificationTrackerDisconnect: { type: 'bool', default: true },
     desktopWidgetOpacity: { type: 'int', default: 55 },
     desktopWidgetNewestOnTop: { type: 'bool', default: true },
     webhookEnabled: { type: 'bool', default: false },
@@ -217,6 +219,7 @@ export const ConfigKeys = defineConfigKeys({
     autoAcceptInviteRequests: { type: 'string', default: 'Off' },
     autoDeclineFriendRequests: { type: 'bool', default: false },
     autoAcceptInviteGroups: { type: 'string', default: '[]' },
+    autoAcceptInviteStatuses: { type: 'string', default: '[]' },
     presenceAutomationTimeRules: { type: 'string', default: '[]' },
     presenceAutomationContextRules: { type: 'string', default: '[]' },
     presenceAutomationMinStatusWriteIntervalMs: {
@@ -324,6 +327,7 @@ export const ConfigKeys = defineConfigKeys({
     localFavoriteFriendsGroups: { type: 'string', default: null },
     feedHiddenUsers: { type: 'string', default: null },
     feedHiddenUsersHideNotifications: { type: 'bool', default: true },
+    feedHiddenUsersHideAll: { type: 'bool', default: false },
 
     // ── Onboarding ───────────────────────────────────
     onboarding_welcome_seen: { type: 'bool', default: false },
@@ -361,6 +365,11 @@ export const FAVORITES_LAYOUT_CONFIG_KEYS = Object.freeze({
         friend: 'VRCX_FavoritesFriendSort',
         world: 'VRCX_FavoritesWorldSort',
         avatar: 'VRCX_FavoritesAvatarSort'
+    }),
+    selectedGroup: Object.freeze({
+        friend: 'VRCX_FavoritesFriendSelectedGroup',
+        world: 'VRCX_FavoritesWorldSelectedGroup',
+        avatar: 'VRCX_FavoritesAvatarSelectedGroup'
     })
 });
 

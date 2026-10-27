@@ -202,6 +202,27 @@ export async function invoke<T>(
             return null as T;
         case 'app__get_clipboard':
             return (await navigator.clipboard.readText()) as T;
+        case 'app__read_clipboard_image': {
+            for (const item of await navigator.clipboard.read()) {
+                const mimeType = item.types.find((type) =>
+                    type.startsWith('image/')
+                );
+                if (!mimeType) continue;
+                const blob = await item.getType(mimeType);
+                const dataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result));
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsDataURL(blob);
+                });
+                return {
+                    fileName: `clipboard.${mimeType.split('/')[1]}`,
+                    mimeType,
+                    dataBase64: dataUrl.slice(dataUrl.indexOf(',') + 1)
+                } as T;
+            }
+            return null as T;
+        }
         case 'app__exit_application':
             await logoutWebsite();
             return null as T;

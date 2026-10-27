@@ -155,6 +155,15 @@ export function AppMenuBar({
                                     >
                                         {t('app_menu.settings')}
                                     </MenuItem>
+                                    <MenuItem
+                                        onClick={() =>
+                                            runAfterRestoringNormalWindow(() =>
+                                                navigate('/themes')
+                                            )
+                                        }
+                                    >
+                                        {t('app.routes.themes')}
+                                    </MenuItem>
                                     {!isWebHost && (
                                         <MenuItem
                                             onClick={() =>

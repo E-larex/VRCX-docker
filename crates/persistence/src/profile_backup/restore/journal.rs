@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
+use crate::config::{fill_missing_preserved_config, read_preserved_config};
 use crate::Error;
 
 use super::super::{
@@ -80,6 +81,8 @@ pub(super) struct RestoreJournal {
     pub(super) source_file_name: String,
     manifest: ProfileRestoreManifestSummary,
     pub(super) rollback_directory_name: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    preserved_config: Vec<(String, String)>,
 }
 
 pub struct PendingProfileRestore {
@@ -146,6 +149,7 @@ pub fn request_staged_profile_restore_with_progress(
         source_file_name: validation.source_file_name.clone(),
         manifest: validation.manifest.clone(),
         rollback_directory_name,
+        preserved_config: read_preserved_config(&app_data.join(DATABASE_FILE_NAME)),
     };
     write_new_journal(&journal_path, &journal).map_err(RequestStagedProfileRestoreError::Other)
 }
@@ -220,6 +224,7 @@ pub fn consume_pending_profile_restore(
 
         if journal.phase == RestoreJournalPhase::Installed {
             install_staged_database(&staged_db, db_path)?;
+            fill_missing_preserved_config(db_path, &journal.preserved_config);
         }
         Ok(())
     })();

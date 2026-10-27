@@ -205,6 +205,18 @@ fn changing_background_opacity_in_settings_reaches_the_open_widget() {
 }
 
 #[test]
+fn changing_the_app_language_redraws_the_open_widget() {
+    let widget = TestWidget::enabled();
+    widget.runtime.ingest_delivery(delivery("Ada", true));
+    widget.config.set_string("appLanguage", "ja").unwrap();
+    let before = widget.windows.refresh_count();
+
+    widget.runtime.reload_settings();
+
+    assert!(widget.windows.refresh_count() > before);
+}
+
+#[test]
 fn moving_or_resizing_the_widget_is_remembered() {
     let widget = TestWidget::enabled();
     let bounds = DesktopWidgetBounds {

@@ -1,6 +1,6 @@
 [package]
 name = "vrcx-0"
-version = "2.32.0"
+version = "2.33.0"
 edition = "2021"
 license.workspace = true
 description = "VRCX-0 desktop shell"
@@ -43,7 +43,7 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-autostart = "2"
 tauri-plugin-window-state = "2"
 percent-encoding = { workspace = true }
-tauri-plugin-updater = "2"
+tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "system-proxy"] }
 sha2.workspace = true
 vrcx-0-core = { path = "../crates/core" }
 vrcx-0-platform = { path = "../crates/platform" }
@@ -79,6 +79,7 @@ windows-sys = { version = "0.61", features = [
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libloading = "0.9"
+rust-ini = "=0.21.1"
 webkit2gtk-nvidia-quirk = "2"
 
 [features]

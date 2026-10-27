@@ -31,6 +31,8 @@ fn settings_written_from_the_settings_page_are_recognised_as_desktop_overlay_set
         "config:vrcx_desktopwidgetopacity",
         "desktopWidgetNewestOnTop",
         "VRCX_desktopWidgetOpacity",
+        "appLanguage",
+        "VRCX_showInstanceIdInLocation",
     ] {
         assert!(is_desktop_widget_config_key(key), "{key}");
     }

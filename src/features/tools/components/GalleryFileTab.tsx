@@ -1,9 +1,11 @@
-import { UploadIcon, XIcon } from 'lucide-react';
+import { ClipboardPasteIcon, UploadIcon, XIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ToolbarOverflowMenu } from '@/components/layout/ToolbarControls';
+import { VrcPlusLockedNotice } from '@/components/media/VrcPlusLockedNotice';
 import { useTileSelectionState } from '@/lib/useTileSelectionState';
+import { isProfileMediaFileUsableWithoutVrcPlus } from '@/shared/utils/currentUserMedia';
 import { extractFileId } from '@/shared/utils/fileUtils';
 import { Button } from '@/ui/shadcn/button';
 import { DropdownMenuGroup, DropdownMenuItem } from '@/ui/shadcn/dropdown-menu';
@@ -33,12 +35,14 @@ export function GalleryFileTab({
         uploadingTab,
         mutatingKey,
         currentUserId,
+        isVrcPlusSupporter,
         bannerCustomUrl,
         mediaProfileLoading,
         mediaProfileError,
         userIcon,
         gridDensityConfig,
         onBeginUpload,
+        onPasteUpload,
         onBulkDelete,
         onClearProfileField,
         onPreview,
@@ -53,6 +57,13 @@ export function GalleryFileTab({
             ? extractFileId(bannerCustomUrl)
             : extractFileId(userIcon);
     const fileIds = useMemo(() => files.map((file) => file.id), [files]);
+    const isLocked = (file: (typeof files)[number]) =>
+        !isVrcPlusSupporter &&
+        !isProfileMediaFileUsableWithoutVrcPlus(
+            tab === 'gallery' ? 'banner' : 'userIcon',
+            file
+        );
+    const hasLockedFiles = files.some(isLocked);
     const selection = useTileSelectionState({
         keys: fileIds,
         resetToken: activeTab
@@ -83,6 +94,15 @@ export function GalleryFileTab({
                             >
                                 <UploadIcon data-icon="inline-start" />
                                 {t('dialog.gallery_icons.upload')}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={Boolean(uploadingTab)}
+                                onClick={() => onPasteUpload(tab)}
+                            >
+                                <ClipboardPasteIcon data-icon="inline-start" />
+                                {t('dialog.gallery_icons.paste_upload')}
                             </Button>
                             {tab === 'gallery' ? (
                                 <ToolbarOverflowMenu>
@@ -139,6 +159,9 @@ export function GalleryFileTab({
                         </>
                     }
                 />
+                {hasLockedFiles && !loading ? (
+                    <VrcPlusLockedNotice className="mb-2" />
+                ) : null}
                 <div className="min-h-0 flex-1 overflow-y-auto pr-1">
                     {loading ? (
                         <LoadingState />
@@ -156,6 +179,7 @@ export function GalleryFileTab({
                                     file={file}
                                     bannerCustomUrl={bannerCustomUrl}
                                     userIcon={userIcon}
+                                    locked={isLocked(file)}
                                     mutatingKey={mutatingKey}
                                     currentUserId={currentUserId}
                                     selected={selection.selectedKeysSet.has(

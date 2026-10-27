@@ -14,9 +14,10 @@ use super::super::journal::{
     advance_journal_phase, read_journal, rollback_restore, RestoreJournalPhase,
 };
 use super::super::{
-    consume_pending_profile_restore, has_pending_profile_restore, take_last_profile_restore_result,
+    consume_pending_profile_restore, has_pending_profile_restore, request_staged_profile_restore,
+    take_last_profile_restore_result,
 };
-use super::common::{prepare_restore, read_restore_value, TestDir};
+use super::common::{prepare_restore, read_restore_value, write_profile_database, TestDir};
 
 #[test]
 fn profile_backup_restore_roundtrip_keeps_journal_until_database_open_succeeds() {
@@ -292,4 +293,65 @@ fn profile_backup_restore_only_clears_invalid_journal_before_profile_files_move(
         .join(RESTORE_PENDING_DIRECTORY)
         .join(DATABASE_FILE_NAME)
         .exists());
+}
+
+fn read_install_id(path: &std::path::Path) -> Option<String> {
+    rusqlite::Connection::open(path)
+        .unwrap()
+        .query_row(
+            "SELECT value FROM configs WHERE key = 'config:vrcx_telemetryinstallid'",
+            [],
+            |row| row.get(0),
+        )
+        .ok()
+}
+
+#[test]
+fn profile_backup_restore_keeps_the_current_install_id_when_the_backup_has_none() {
+    let dir = TestDir::new("install-id-missing");
+    let (app_data, db_path, validation) = prepare_restore(&dir, "install-id-missing");
+    fs::remove_file(app_data.join(RESTORE_JOURNAL_FILE_NAME)).unwrap();
+    rusqlite::Connection::open(&db_path)
+        .unwrap()
+        .execute(
+            "INSERT INTO configs (key, value) VALUES ('config:vrcx_telemetryinstallid', 'install-current')",
+            [],
+        )
+        .unwrap();
+    request_staged_profile_restore(&app_data, &validation).unwrap();
+
+    let pending = consume_pending_profile_restore(&app_data, &db_path)
+        .unwrap()
+        .unwrap();
+    pending.finalize().unwrap();
+
+    assert_eq!(read_restore_value(&db_path), "new");
+    assert_eq!(
+        read_install_id(&db_path).as_deref(),
+        Some("install-current")
+    );
+}
+
+#[test]
+fn profile_backup_restore_keeps_the_install_id_carried_by_the_backup() {
+    let dir = TestDir::new("install-id-carried");
+    let db_path = dir.0.join(DATABASE_FILE_NAME);
+    write_profile_database(&db_path, 1, "new");
+    rusqlite::Connection::open(&db_path)
+        .unwrap()
+        .execute(
+            "INSERT INTO configs (key, value) VALUES ('config:vrcx_telemetryinstallid', 'install-backup')",
+            [],
+        )
+        .unwrap();
+
+    crate::config::fill_missing_preserved_config(
+        &db_path,
+        &[(
+            "config:vrcx_telemetryinstallid".to_string(),
+            "install-current".to_string(),
+        )],
+    );
+
+    assert_eq!(read_install_id(&db_path).as_deref(), Some("install-backup"));
 }

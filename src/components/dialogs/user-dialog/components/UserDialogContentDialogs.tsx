@@ -1,20 +1,23 @@
 import { BoopEmojiDialog } from '../../BoopEmojiDialog';
 import { InviteMessageDialog } from '../../InviteMessageDialog';
-import {
-    CurrentUserSocialStatusDialog,
-    UserProfileDetailsDialog
-} from '../UserSelfEditDialogs';
+import { CurrentUserSocialStatusDialog } from '../UserSelfEditDialogs';
 import type { useUserDialogActions } from '../useUserDialogActions';
 import type { useUserDialogMemoState } from '../useUserDialogMemoState';
 import type { useUserDialogSelfActions } from '../useUserDialogSelfActions';
+import { UserAccountStandingDialog } from './UserAccountStandingDialog';
 import { UserDialogGroupInviteDialog } from './UserDialogGroupInviteDialog';
 import { UserDialogGroupQuickModerationDialog } from './UserDialogGroupQuickModerationDialog';
 import { UserNoteMemoDialog } from './UserNoteMemoDialog';
+import { UserReportDialog } from './UserReportDialog';
 
 type UserActionsState = ReturnType<typeof useUserDialogActions>;
 type SelfActionsState = ReturnType<typeof useUserDialogSelfActions>;
 
 type UserDialogContentDialogsProps = {
+    accountStandingDialog: {
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+    };
     actionStatus: string;
     boopDialog: {
         request: UserActionsState['boopDialogRequest'];
@@ -41,8 +44,13 @@ type UserDialogContentDialogsProps = {
         onOpenChange: (open: boolean) => void;
     };
     noteMemoDialog: ReturnType<typeof useUserDialogMemoState>['memoDialog'];
+    reportDialog: {
+        open: boolean;
+        targetUserId: string;
+        targetLabel?: string;
+        onOpenChange: (open: boolean) => void;
+    };
     socialStatusDialog: SelfActionsState['socialStatusDialog'];
-    profileDetailsDialog: SelfActionsState['profileDetailsDialog'];
     inviteMessageDialog: {
         request: UserActionsState['inviteMessageRequest'];
         onOpenChange: UserActionsState['handleInviteMessageDialogOpenChange'];
@@ -55,13 +63,14 @@ type UserDialogContentDialogsProps = {
 };
 
 export function UserDialogContentDialogs({
+    accountStandingDialog,
     actionStatus,
     boopDialog,
     groupInviteDialog,
     groupQuickModerationDialog,
     noteMemoDialog,
+    reportDialog,
     socialStatusDialog,
-    profileDetailsDialog,
     inviteMessageDialog
 }: UserDialogContentDialogsProps) {
     return (
@@ -81,22 +90,6 @@ export function UserDialogContentDialogs({
             <CurrentUserSocialStatusDialog
                 controller={socialStatusDialog}
                 actionStatus={actionStatus}
-            />
-            <UserProfileDetailsDialog
-                open={profileDetailsDialog.open}
-                onOpenChange={profileDetailsDialog.onOpenChange}
-                actionStatus={actionStatus}
-                draft={profileDetailsDialog.draft}
-                setDraft={profileDetailsDialog.setDraft}
-                languageRows={profileDetailsDialog.languageRows}
-                availableLanguageOptions={
-                    profileDetailsDialog.availableLanguageOptions
-                }
-                languageOptionsStatus={
-                    profileDetailsDialog.languageOptionsStatus
-                }
-                onCancel={profileDetailsDialog.onCancel}
-                onSave={profileDetailsDialog.onSave}
             />
             <InviteMessageDialog
                 open={Boolean(inviteMessageDialog.request)}
@@ -156,6 +149,16 @@ export function UserDialogContentDialogs({
                 onDetailedManagement={
                     groupQuickModerationDialog.onDetailedManagement
                 }
+            />
+            <UserReportDialog
+                open={reportDialog.open}
+                targetUserId={reportDialog.targetUserId}
+                targetLabel={reportDialog.targetLabel}
+                onOpenChange={reportDialog.onOpenChange}
+            />
+            <UserAccountStandingDialog
+                open={accountStandingDialog.open}
+                onOpenChange={accountStandingDialog.onOpenChange}
             />
         </>
     );

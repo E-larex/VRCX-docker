@@ -10,7 +10,8 @@ export {
     installCommunityTheme,
     loadCatalog,
     loadCommunityThemeStats,
-    reportCommunityThemeInstall
+    reportCommunityThemeInstall,
+    updateInstalledCommunityTheme
 } from './community-theme/installedThemes';
 export {
     loadLocalCommunityThemePreview,

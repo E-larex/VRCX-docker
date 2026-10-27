@@ -7,18 +7,16 @@ import {
     buildScreenshotSearchRow,
     DEFAULT_SCREENSHOT_SEARCH_SORT,
     formatScreenshotBytes,
-    getDroppedScreenshotPath,
     getGalleryFolderPathSet,
     getFileNameFromPath,
     normalizeGalleryScrollPositions,
     normalizeGalleryScrollTop,
-    normalizeDroppedFilePath,
     normalizeScreenshotMetadata,
     normalizeScreenshotSearchResult,
-    pickRandomScreenshotPath,
     resolveGalleryFolder,
     resolvePathAfterScreenshotDelete,
     searchResultToLibraryImage,
+    SCREENSHOT_FAVORITES_FOLDER,
     SCREENSHOT_METADATA_SEARCH_TYPES,
     serializeGalleryScrollPositions,
     sortScreenshotRowsByNewest,
@@ -26,33 +24,6 @@ import {
 } from './screenshotMetadataValues';
 
 describe('screenshotMetadataValues', () => {
-    it('reads a dropped screenshot path from files, file URLs, or plain text', () => {
-        expect(
-            getDroppedScreenshotPath({
-                dataTransfer: {
-                    files: [{ path: 'D:\\VRChat\\Photos\\shot.png' }],
-                    getData: () => ''
-                }
-            })
-        ).toBe('D:\\VRChat\\Photos\\shot.png');
-
-        expect(
-            normalizeDroppedFilePath(
-                '\n file:///C:/Users/Alice/Pictures/VRChat%20Shot.png\n'
-            )
-        ).toBe('C:/Users/Alice/Pictures/VRChat Shot.png');
-
-        expect(
-            getDroppedScreenshotPath({
-                dataTransfer: {
-                    files: [],
-                    getData: (type: string) =>
-                        type === 'text/plain' ? 'D:\\VRChat\\fallback.png' : ''
-                }
-            })
-        ).toBe('D:\\VRChat\\fallback.png');
-    });
-
     it('normalizes screenshot metadata so the page can render stable details', () => {
         const metadata = normalizeScreenshotMetadata(
             {
@@ -305,6 +276,15 @@ describe('screenshotMetadataValues', () => {
             resolveGalleryFolder({ rootPath: 'D:\\Root', folders: [] }, '')
         ).toBe('D:\\Root');
     });
+
+    it('keeps the favorites view selected even though it is not a real folder', () => {
+        expect(
+            resolveGalleryFolder({ rootPath: 'D:\\Root', folders: [] }, [
+                SCREENSHOT_FAVORITES_FOLDER,
+                'D:\\Root'
+            ])
+        ).toBe(SCREENSHOT_FAVORITES_FOLDER);
+    });
 });
 
 describe('resolvePathAfterScreenshotDelete', () => {
@@ -343,21 +323,6 @@ describe('resolvePathAfterScreenshotDelete', () => {
         ).toBeNull();
 
         expect(resolvePathAfterScreenshotDelete(null)).toBeNull();
-    });
-});
-
-describe('pickRandomScreenshotPath', () => {
-    const images = [{ path: 'a.png' }, { path: 'b.png' }, { path: 'c.png' }];
-
-    it('maps the random value across the whole list and clamps the upper bound', () => {
-        expect(pickRandomScreenshotPath(images, 0)).toBe('a.png');
-        expect(pickRandomScreenshotPath(images, 0.5)).toBe('b.png');
-        expect(pickRandomScreenshotPath(images, 0.999)).toBe('c.png');
-        expect(pickRandomScreenshotPath(images, 1)).toBe('c.png');
-    });
-
-    it('returns nothing when there is no image to open', () => {
-        expect(pickRandomScreenshotPath([], 0.5)).toBe('');
     });
 });
 

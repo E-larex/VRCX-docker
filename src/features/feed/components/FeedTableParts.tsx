@@ -39,6 +39,7 @@ import {
 import { userImage } from '@/services/entityMediaService';
 import { parseLocation } from '@/shared/utils/location';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/ui/shadcn/avatar';
 import { Button } from '@/ui/shadcn/button';
@@ -149,6 +150,9 @@ function FeedUserLink({
         actions.canUseFeedFriendLocation(location)
     );
     const isHiddenFromFeed = actions.isFeedUserHidden(userId);
+    const hideAllFromFeed = usePreferencesStore(
+        (state) => state.feedHiddenUsersHideAll
+    );
 
     useEffect(() => {
         if (!userId || displayName !== UNKNOWN_FEED_USER_DISPLAY_NAME) {
@@ -342,9 +346,13 @@ function FeedUserLink({
                                     <EyeOffIcon />
                                 )}
                                 {t(
-                                    isHiddenFromFeed
-                                        ? 'view.feed.context.unhide_user'
-                                        : 'view.feed.context.hide_user'
+                                    hideAllFromFeed
+                                        ? isHiddenFromFeed
+                                            ? 'view.feed.context.unhide_user_all'
+                                            : 'view.feed.context.hide_user_all'
+                                        : isHiddenFromFeed
+                                          ? 'view.feed.context.unhide_user'
+                                          : 'view.feed.context.hide_user'
                                 )}
                             </ContextMenuItem>
                         </ContextMenuGroup>

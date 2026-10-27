@@ -370,6 +370,13 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
     fn now_playing(&self) -> NowPlayingSnapshot {
         DesktopRuntimeServices::now_playing(self).as_ref().clone()
     }
+
+    fn game_started_at(&self) -> Option<String> {
+        let session = self.session.snapshot();
+        session
+            .last_game_started_at
+            .filter(|_| session.is_game_running)
+    }
 }
 
 #[cfg(test)]

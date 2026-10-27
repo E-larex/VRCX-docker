@@ -8,6 +8,12 @@ export const TILE_SURFACE =
 
 export const TILE_LOCKED = 'opacity-70 grayscale-[0.6]';
 
+export const TILE_LOCK_OVERLAY =
+    'pointer-events-none absolute inset-0 flex items-center justify-center';
+
+export const TILE_LOCK_ICON =
+    'bg-black/65 flex size-9 items-center justify-center rounded-full text-white shadow-sm backdrop-blur-sm';
+
 export const TILE_LABEL =
     'pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/85 via-black/45 to-transparent px-2 pt-6 pb-1.5 text-left text-xs font-semibold text-white';
 
@@ -20,6 +26,9 @@ export const TILE_SELECT_TOGGLE =
     'group-has-[:focus-visible]/tile:opacity-100 pointer-fine:group-hover/tile:opacity-100 absolute top-2 left-2 z-20 opacity-0 transition-opacity';
 
 export const TILE_SELECT_TOGGLE_VISIBLE = 'opacity-100';
+
+export const TILE_FAVORITE_TOGGLE =
+    'group-has-[:focus-visible]/tile:opacity-100 pointer-fine:group-hover/tile:opacity-100 absolute top-2 right-2 z-20 opacity-0 transition-opacity';
 
 export const TILE_SELECT_OVERLAY_SHIFT =
     'group-has-[:focus-visible]/tile:left-9 pointer-fine:group-hover/tile:left-9 left-2 transition-[left] duration-150';

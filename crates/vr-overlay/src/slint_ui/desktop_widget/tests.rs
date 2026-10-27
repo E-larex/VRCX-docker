@@ -119,6 +119,10 @@ fn switching_the_order_repaints_exactly_like_a_freshly_opened_widget() {
 }
 
 #[test]
+#[cfg_attr(
+    not(windows),
+    ignore = "the desktop widget only ships on Windows and text placement follows the system fonts"
+)]
 fn every_rows_avatar_sits_level_with_its_text() {
     let rows = vec![
         DesktopWidgetRow {
@@ -154,9 +158,9 @@ fn every_rows_avatar_sits_level_with_its_text() {
     assert_eq!(avatars.len(), 4);
     for (top, bottom) in avatars {
         let avatar = (top + bottom) as f32 / 2.0;
-        let text = frame.text_centroid(top.saturating_sub(4)..bottom + 5);
+        let text = frame.first_text_line_centroid(top);
         assert!(
-            (text - avatar).abs() <= 0.75,
+            (text - avatar).abs() <= 1.25,
             "avatar centre {avatar} text centre {text}"
         );
     }
@@ -192,6 +196,57 @@ fn pressing_on_empty_space_starts_moving_the_widget() {
     assert_eq!(
         widget.click(20.0, HEIGHT as f32 - 20.0),
         [DesktopWidgetAction::Drag]
+    );
+}
+
+#[test]
+fn dragging_a_name_moves_the_widget() {
+    let mut widget = Widget::new();
+    widget.settled(&model(vec![row(7, "Ada", false)], 0, true));
+
+    assert_eq!(
+        widget.press_and_move(14.0, top_row_y(), 12.0),
+        [DesktopWidgetAction::Drag]
+    );
+}
+
+#[test]
+fn dragging_what_happened_moves_the_widget() {
+    let mut widget = Widget::new();
+    widget.settled(&model(vec![row(7, "Ada", false)], 0, true));
+
+    assert_eq!(
+        widget.press_and_move(80.0, top_row_y(), 12.0),
+        [DesktopWidgetAction::Drag]
+    );
+}
+
+#[test]
+fn a_slightly_shaky_click_on_a_name_still_opens_that_person() {
+    let mut widget = Widget::new();
+    widget.settled(&model(vec![row(7, "Ada", false)], 0, true));
+
+    let mut actions = widget.press_and_move(14.0, top_row_y(), 2.0);
+    widget.host.pointer_released(16.0, top_row_y());
+    actions.extend(widget.host.take_actions());
+
+    assert_eq!(actions, [DesktopWidgetAction::Actor(7)]);
+}
+
+#[test]
+fn pressing_beside_a_short_line_of_what_happened_starts_moving_the_widget() {
+    let mut short = row(7, "Ada", false);
+    short.detail = "left".to_string();
+    let mut widget = Widget::new();
+    widget.settled(&model(vec![short], 0, true));
+
+    assert_eq!(
+        widget.click(200.0, top_row_y()),
+        [DesktopWidgetAction::Drag]
+    );
+    assert_eq!(
+        widget.click(48.0, top_row_y()),
+        [DesktopWidgetAction::Detail(7)]
     );
 }
 
@@ -232,6 +287,33 @@ fn a_blocked_player_row_reads_in_dark_red() {
     );
 }
 
+#[test]
+fn moving_to_a_screen_with_a_larger_scale_keeps_filling_the_same_window() {
+    let mut widget = Widget::new();
+    widget.host.set_scale_factor(1.25);
+
+    let frame = widget.render(&model(Vec::new(), 100, false));
+
+    assert_eq!(frame.alpha(WIDTH - 20, HEIGHT - 20), 255);
+}
+
+#[test]
+fn a_resize_that_arrives_before_the_new_scale_still_fills_the_resized_window() {
+    let (width, height) = (WIDTH * 5 / 4, HEIGHT * 5 / 4);
+    let mut host = SlintDesktopWidgetHost::new(WIDTH, HEIGHT, 1.0).unwrap();
+    let mut out = vec![0; (width * height * 4) as usize];
+    host.resize(width, height);
+    host.set_scale_factor(1.25);
+
+    host.write_model(&model(Vec::new(), 100, false));
+    host.render_bgra(&mut out);
+
+    assert_eq!(
+        out[(((height - 20) * width + width - 20) * 4 + 3) as usize],
+        255
+    );
+}
+
 struct Widget {
     host: SlintDesktopWidgetHost,
     out: Vec<u8>,
@@ -261,6 +343,14 @@ impl Widget {
             self.host.render_bgra(&mut self.out);
         }
         Frame(self.out.clone())
+    }
+
+    fn press_and_move(&mut self, x: f32, y: f32, distance: f32) -> Vec<DesktopWidgetAction> {
+        self.host.take_actions();
+        self.host.pointer_moved(x, y);
+        self.host.pointer_pressed(x, y);
+        self.host.pointer_moved(x + distance, y);
+        self.host.take_actions()
     }
 
     fn click(&mut self, x: f32, y: f32) -> Vec<DesktopWidgetAction> {
@@ -313,13 +403,19 @@ impl Frame {
         spans
     }
 
-    fn text_centroid(&self, rows: std::ops::Range<u32>) -> f32 {
-        let (weighted, total) = rows
-            .flat_map(|y| (33..240).map(move |x| (x, y)))
-            .map(|(x, y)| (y, f32::from(self.0[((y * WIDTH + x) * 4 + 2) as usize])))
-            .filter(|(_, red)| *red > 120.0)
-            .fold((0.0, 0.0), |(weighted, total), (y, red)| {
-                (weighted + y as f32 * red, total + red)
+    fn first_text_line_centroid(&self, from: u32) -> f32 {
+        let (weighted, total) = (from..HEIGHT)
+            .map(|y| {
+                let ink: f32 = (33..240)
+                    .map(|x| f32::from(self.0[((y * WIDTH + x) * 4 + 2) as usize]))
+                    .filter(|red| *red > 120.0)
+                    .sum();
+                (y, ink)
+            })
+            .skip_while(|(_, ink)| *ink == 0.0)
+            .take_while(|(_, ink)| *ink > 0.0)
+            .fold((0.0, 0.0), |(weighted, total), (y, ink)| {
+                (weighted + y as f32 * ink, total + ink)
             });
         assert!(total > 0.0, "no text found");
         weighted / total

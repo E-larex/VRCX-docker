@@ -8,12 +8,12 @@ import {
     ListIcon,
     PanelRightCloseIcon,
     PanelRightOpenIcon,
+    StarIcon,
     Trash2Icon,
     UploadIcon,
     UsersIcon,
     XIcon
 } from 'lucide-react';
-import type { DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -34,6 +34,7 @@ import {
     ToolbarViews,
     toolbarSearchScopeTrigger
 } from '@/components/layout/ToolbarControls';
+import { cn } from '@/lib/utils';
 import { Button } from '@/ui/shadcn/button';
 import {
     Card,
@@ -88,7 +89,9 @@ export function ScreenshotDetailActions({
     onCopyImage,
     onUpload,
     onDelete,
-    onDeleteFile
+    onDeleteFile,
+    isFavorite,
+    onToggleFavorite
 }: {
     metadata: NormalizedScreenshotMetadata | null;
     isVrcPlusSupporter: boolean;
@@ -101,6 +104,8 @@ export function ScreenshotDetailActions({
     onUpload: () => void;
     onDelete: () => void;
     onDeleteFile: () => void;
+    isFavorite: boolean;
+    onToggleFavorite: () => void;
 }) {
     const { t } = useTranslation();
 
@@ -109,6 +114,23 @@ export function ScreenshotDetailActions({
             <Button variant="ghost" size="sm" onClick={onBackToGallery}>
                 <ArrowLeftIcon data-icon="inline-start" />
                 {t('dialog.screenshot_metadata.gallery')}
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                disabled={!metadata?.filePath}
+                aria-pressed={isFavorite}
+                onClick={onToggleFavorite}
+            >
+                <StarIcon
+                    data-icon="inline-start"
+                    className={cn(isFavorite && 'fill-current text-amber-400')}
+                />
+                {t(
+                    isFavorite
+                        ? 'dialog.screenshot_metadata.unfavorite'
+                        : 'dialog.screenshot_metadata.favorite'
+                )}
             </Button>
             <Button
                 variant="outline"
@@ -428,9 +450,7 @@ export function ScreenshotMetadataPreviewCard({
     onNavigatePrev,
     onNavigateNext,
     onToggleDetails,
-    onImagePreview,
-    onDragOver,
-    onDrop
+    onImagePreview
 }: {
     metadata: NormalizedScreenshotMetadata | null;
     imageUrl: string;
@@ -442,8 +462,6 @@ export function ScreenshotMetadataPreviewCard({
     onNavigateNext: () => void;
     onToggleDetails: () => void;
     onImagePreview: () => void;
-    onDragOver: (event: DragEvent<HTMLDivElement>) => void;
-    onDrop: (event: DragEvent<HTMLDivElement>) => void;
 }) {
     const { t } = useTranslation();
 
@@ -499,12 +517,7 @@ export function ScreenshotMetadataPreviewCard({
                     </div>
                 </div>
             </CardHeader>
-            <CardContent
-                className="flex min-h-0 flex-1 items-center justify-center"
-                onDragOver={onDragOver}
-                onDragEnter={onDragOver}
-                onDrop={onDrop}
-            >
+            <CardContent className="flex min-h-0 flex-1 items-center justify-center">
                 {isMetadataLoading && !imageUrl ? (
                     <EmptyState
                         loading

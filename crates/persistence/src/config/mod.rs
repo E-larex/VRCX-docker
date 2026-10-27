@@ -1,5 +1,6 @@
 mod local;
 mod obfuscation;
+mod preserved;
 mod repository;
 mod schema;
 mod types;
@@ -8,6 +9,9 @@ pub use local::{
     config_apply_mutations, config_list_values, config_remove_value, config_set_values,
 };
 pub use obfuscation::migrate_sensitive_config_obfuscation;
+pub(crate) use preserved::{
+    fill_missing_preserved_config, read_preserved_config, write_preserved_config,
+};
 pub use repository::{
     ensure_config_table, get_bool, get_json, get_raw, get_string, remove, set_bool, set_json,
     set_string, ConfigRepository,

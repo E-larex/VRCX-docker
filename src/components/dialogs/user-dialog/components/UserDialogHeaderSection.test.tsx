@@ -82,9 +82,11 @@ function createHeaderModel(effect?: InventoryItemRecord): UserHeaderModel {
             hideAvatar: false,
             showAvatar: false
         },
+        bannerColor: '',
         bannerFallbackUrl: '',
         canInviteFromCurrentLocation: false,
         currentAvatarTarget: '',
+        currentUserAccountStanding: '',
         currentUserBoopingEnabled: false,
         detail: '',
         extendedModerationState: {
@@ -136,9 +138,7 @@ function createHeaderCommands(): UserHeaderCommands {
         onCopyUserId: noop,
         onCopyUserUrl: noop,
         onEditMemo: noop,
-        onEditSelfProfileDetails: noop,
-        onEditSelfProfileMedia: noop,
-        onEditSelfProfileDecorations: noop,
+        onEditSelfProfile: noop,
         onEditSelfStatus: noop,
         onExtendedModeration: noop,
         onFriendRequest: noop,
@@ -156,7 +156,8 @@ function createHeaderCommands(): UserHeaderCommands {
         onOpenUserIcon: noop,
         onOpenUserUrl: noop,
         onRefresh: noop,
-        onReportHacking: noop,
+        onReportUser: noop,
+        onShowAccountStanding: noop,
         onShowAvatarAuthor: noop,
         onShowInstanceHistory: noop,
         onToggleBadgeShowcased: noop,
@@ -217,6 +218,29 @@ describe('UserDialogHeaderSection nameplate', () => {
 
         expect(displayName.style.fontSize).toBe('15px');
     });
+});
+
+describe('UserDialogHeaderSection age verification', () => {
+    it.each([
+        ['18+', true],
+        ['verified', false]
+    ])(
+        'shows the 18+ label only for adult verification (%s)',
+        (ageVerificationStatus, showsAdultLabel) => {
+            const headerModel = createHeaderModel();
+            headerModel.profile.ageVerified = true;
+            headerModel.profile.ageVerificationStatus = ageVerificationStatus;
+
+            render(
+                <UserDialogHeaderSection
+                    headerModel={headerModel}
+                    headerCommands={createHeaderCommands()}
+                />
+            );
+
+            expect(Boolean(screen.queryByText('18+'))).toBe(showsAdultLabel);
+        }
+    );
 });
 
 describe('UserDialogHeaderSection appearance visibility', () => {
@@ -401,6 +425,70 @@ describe('UserDialogHeaderSection friend actions', () => {
                 .closest('[data-slot="dropdown-menu-item"]')
                 ?.getAttribute('data-variant')
         ).toBe('destructive');
+    });
+});
+
+describe('UserDialogHeaderSection account standing', () => {
+    function actionMenuIndicator() {
+        return screen
+            .getByRole('button', { name: 'Open entity actions' })
+            .querySelector('span.bg-primary');
+    }
+
+    it('opens account standing from the own action menu', async () => {
+        const headerCommands = createHeaderCommands();
+        headerCommands.onShowAccountStanding = vi.fn();
+
+        render(
+            <UserDialogHeaderSection
+                headerModel={createHeaderModel()}
+                headerCommands={headerCommands}
+            />
+        );
+
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Open entity actions' })
+        );
+        fireEvent.click(
+            await screen.findByText('dialog.user.actions.account_standing')
+        );
+
+        expect(headerCommands.onShowAccountStanding).toHaveBeenCalledOnce();
+    });
+
+    it('marks the action menu only when the own standing is not good', () => {
+        const headerModel = createHeaderModel();
+        headerModel.currentUserAccountStanding = 'good';
+        const { rerender } = render(
+            <UserDialogHeaderSection
+                headerModel={headerModel}
+                headerCommands={createHeaderCommands()}
+            />
+        );
+        expect(actionMenuIndicator()).toBeNull();
+
+        rerender(
+            <UserDialogHeaderSection
+                headerModel={{
+                    ...headerModel,
+                    currentUserAccountStanding: 'restricted'
+                }}
+                headerCommands={createHeaderCommands()}
+            />
+        );
+        expect(actionMenuIndicator()).not.toBeNull();
+
+        rerender(
+            <UserDialogHeaderSection
+                headerModel={{
+                    ...headerModel,
+                    currentUserAccountStanding: 'restricted',
+                    isCurrentUser: false
+                }}
+                headerCommands={createHeaderCommands()}
+            />
+        );
+        expect(actionMenuIndicator()).toBeNull();
     });
 });
 

@@ -28,10 +28,12 @@ pub const HMD_NOTIFICATION_OPACITY_CONFIG_KEY: &str = "hmdNotificationOpacity";
 pub const HMD_NOTIFICATION_POSITION_CONFIG_KEY: &str = "hmdNotificationPosition";
 pub const HMD_NOTIFICATION_STYLE_CONFIG_KEY: &str = "hmdNotificationStyle";
 pub const HMD_NOTIFICATION_AVATARS_CONFIG_KEY: &str = "hmdNotificationAvatars";
+pub const HMD_NOTIFICATION_TRACKER_DISCONNECT_CONFIG_KEY: &str = "hmdNotificationTrackerDisconnect";
 const APP_LANGUAGE_CONFIG_KEY: &str = "appLanguage";
 const DATE_TIME_HOUR12_CONFIG_KEY: &str = "dtHour12";
 const SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY: &str = "VRCX_showInstanceIdInLocation";
 
+#[cfg(windows)]
 pub(crate) fn load_app_language(config: &ConfigRepository) -> String {
     config
         .get_string(APP_LANGUAGE_CONFIG_KEY, "en")
@@ -47,6 +49,16 @@ fn load_locale_settings(config: &ConfigRepository) -> (OverlayLocale, bool) {
         .get_bool(SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY, false)
         .unwrap_or(false);
     (locale, show_instance_id_in_location)
+}
+
+pub(crate) fn is_localizer_config_key(key: &str) -> bool {
+    let key = vrcx_0_contracts::resolve_config_key(key);
+    [
+        APP_LANGUAGE_CONFIG_KEY,
+        SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY,
+    ]
+    .into_iter()
+    .any(|localizer_key| vrcx_0_contracts::resolve_config_key(localizer_key) == key)
 }
 
 pub(crate) fn load_localizer(config: &ConfigRepository) -> OverlayLocalizer {
@@ -144,6 +156,9 @@ pub(super) fn load_runtime_config(
             style: hmd_style,
             avatars: config
                 .get_bool(HMD_NOTIFICATION_AVATARS_CONFIG_KEY, true)
+                .unwrap_or(true),
+            tracker_disconnect: config
+                .get_bool(HMD_NOTIFICATION_TRACKER_DISCONNECT_CONFIG_KEY, true)
                 .unwrap_or(true),
         },
         render: WristOverlayRenderOptions {

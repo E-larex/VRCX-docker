@@ -355,6 +355,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     desktopNotificationAvatars: true,
     notificationDoNotDisturbEndOnGameStart: true,
     busyStatusDoNotDisturb: true,
+    hideVideoErrorNotifications: false,
     notificationTTS: 'Never',
     notificationTTSNameMode: 'username',
     notificationTTSNickName: false,
@@ -373,6 +374,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     hmdNotificationPosition: 'bottom',
     hmdNotificationStyle: 'standard',
     hmdNotificationAvatars: true,
+    hmdNotificationTrackerDisconnect: true,
     desktopWidgetOpacity: 55,
     desktopWidgetNewestOnTop: true,
     webhookEnabled: false,
@@ -421,6 +423,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     localFavoriteFriendsGroups: [],
     feedHiddenUsers: [],
     feedHiddenUsersHideNotifications: true,
+    feedHiddenUsersHideAll: false,
     hidePrivateFromFeed: false,
     overlayActivityFilters: EMPTY_ACTIVITY_FILTER_PROFILE,
     vrNotificationActivityFilters: EMPTY_ACTIVITY_FILTER_PROFILE,
@@ -574,6 +577,9 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
             next.notificationDoNotDisturbEndOnGameStart
         ),
         busyStatusDoNotDisturb: normalizeBool(next.busyStatusDoNotDisturb),
+        hideVideoErrorNotifications: normalizeBool(
+            next.hideVideoErrorNotifications
+        ),
         notificationTTS: String(next.notificationTTS || 'Never'),
         notificationTTSNameMode: normalizeNotificationTtsNameMode(
             next.notificationTTSNameMode,
@@ -629,6 +635,9 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
             next.hmdNotificationStyle
         ),
         hmdNotificationAvatars: normalizeBool(next.hmdNotificationAvatars),
+        hmdNotificationTrackerDisconnect: normalizeBool(
+            next.hmdNotificationTrackerDisconnect
+        ),
         desktopWidgetOpacity: normalizeBoundedInt(next.desktopWidgetOpacity, {
             min: 0,
             max: 100,
@@ -709,6 +718,7 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
         feedHiddenUsersHideNotifications: normalizeBool(
             next.feedHiddenUsersHideNotifications
         ),
+        feedHiddenUsersHideAll: normalizeBool(next.feedHiddenUsersHideAll),
         hidePrivateFromFeed: normalizeBool(next.hidePrivateFromFeed),
         overlayActivityFilters: normalizeActivityFilterProfile(
             next.overlayActivityFilters

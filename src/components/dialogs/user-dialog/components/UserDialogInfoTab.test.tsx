@@ -11,6 +11,10 @@ import {
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@/components/economy/useEconomyBalance', () => ({
+    useEconomyBalance: () => ({ data: 2450, refetch: vi.fn() })
+}));
+
 import {
     UserDialogActivitySummaryPanel,
     UserDialogBioPanel
@@ -188,8 +192,10 @@ describe('UserDialogActivitySummaryPanel', () => {
             'dialog.user.info.activity_summary',
             'dialog.user.info.last_activity',
             'dialog.user.info.play_time',
+            'dialog.user.info.vrc_credits',
             'dialog.user.info.date_joined'
         ]);
+        expect(screen.getByText(`${(2450).toLocaleString()}V`)).toBeTruthy();
     });
 
     it('opens Feed from last activity only for friends', () => {
@@ -248,7 +254,7 @@ describe('UserDialogBioPanel', () => {
         );
         expect(
             screen.queryByRole('button', {
-                name: 'dialog.user.actions.edit_profile_details'
+                name: 'dialog.user.actions.edit_profile'
             })
         ).toBeNull();
 
@@ -261,7 +267,7 @@ describe('UserDialogBioPanel', () => {
         );
         fireEvent.click(
             screen.getByRole('button', {
-                name: 'dialog.user.actions.edit_profile_details'
+                name: 'dialog.user.actions.edit_profile'
             })
         );
         expect(onEditBio).toHaveBeenCalledOnce();

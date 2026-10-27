@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,6 +14,11 @@ vi.mock('@/state/vrchatConfigStore', () => ({
 import { GroupProfileEditDialog } from './GroupProfileEditDialog';
 
 afterEach(cleanup);
+
+async function waitForInitialFocus() {
+    const name = screen.getByLabelText('dialog.group.info.name');
+    await waitFor(() => expect(document.activeElement).toBe(name));
+}
 
 function createGroup(patch: Partial<GroupProfileRecord> = {}) {
     return {
@@ -45,6 +50,7 @@ describe('GroupProfileEditDialog', () => {
                 onSave={onSave}
             />
         );
+        await waitForInitialFocus();
 
         const name = screen.getByLabelText('dialog.group.info.name');
         await user.clear(name);
@@ -87,6 +93,7 @@ describe('GroupProfileEditDialog', () => {
                 onSave={onSave}
             />
         );
+        await waitForInitialFocus();
 
         const shortCode = screen.getByLabelText('dialog.group.edit.short_code');
         await user.clear(shortCode);

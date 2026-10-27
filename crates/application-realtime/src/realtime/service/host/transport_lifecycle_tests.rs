@@ -590,6 +590,7 @@ fn fresh_offline_baseline_keeps_a_pending_offline_through_reconnect() -> Result<
         runtime_with_active_session("reconnect-placeholder-offline")?;
     let old_transport = active_transport(&runtime);
     seed_online_friend(&runtime, &active_session, old_transport.generation)?;
+    runtime.set_task_executor_for_test(DiscardTaskExecutor);
     runtime.handle_active_friend_ws_message_for_test(&RealtimeWsMessagePayload {
         json: json!({"type": "friend-offline", "content": {"userId": "usr_friend"}}),
         raw: "{}".into(),
@@ -624,7 +625,6 @@ fn fresh_offline_baseline_keeps_a_pending_offline_through_reconnect() -> Result<
         None,
         HashMap::from([("usr_friend".into(), placeholder)]),
     )?;
-    runtime.set_task_executor_for_test(DiscardTaskExecutor);
 
     runtime.runtime().start_from_friend_baseline(
         active_session.user_id.clone(),
@@ -1707,5 +1707,37 @@ fn a_reconnect_the_recorder_did_not_cover_still_writes_what_changed() -> Result<
     reconnect_with_friend_at(&runtime, &session, 2, "wrld_new:456")?;
 
     assert_eq!(location_rows(&runtime, &session)?, 1);
+    Ok(())
+}
+
+#[test]
+fn economy_update_emits_the_wallet_balance_for_the_session_user() -> Result<()> {
+    let (_dir, runtime, active_session) = runtime_with_active_session("economy-update")?;
+    let transport = active_transport(&runtime);
+    runtime.take_events_for_test();
+    let sink = RealtimeHostRuntimeMessageSink {
+        runtime: Arc::clone(runtime.runtime()),
+    };
+
+    sink.handle_realtime_ws_message(
+        transport.generation,
+        transport.session_generation,
+        &active_session,
+        &RealtimeWsMessagePayload {
+            json: json!({"type": "economy-update", "content": {"walletBalance": 2450}}),
+            raw: "{}".into(),
+            received_at: "2026-10-21T00:00:00Z".into(),
+        },
+    );
+
+    let events = runtime.take_events_for_test();
+    let balance = events
+        .iter()
+        .find(|event| event.name == "realtimeEconomyBalance")
+        .expect("economy-update should emit the wallet balance");
+    assert_eq!(
+        balance.payload.0,
+        json!({"userId": active_session.user_id, "walletBalance": 2450})
+    );
     Ok(())
 }

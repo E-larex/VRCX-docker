@@ -188,6 +188,8 @@ export function resolvePathAfterScreenshotDelete(
     return null;
 }
 
+export const SCREENSHOT_FAVORITES_FOLDER = '::favorites';
+
 export function resolveGalleryFolder(
     folderTree: ScreenshotFolderTree | null | undefined,
     preferredFolders: string | readonly string[]
@@ -198,8 +200,9 @@ export function resolveGalleryFolder(
         : [preferredFolders];
     for (const preferredFolder of preferredList) {
         if (
-            preferredFolder &&
-            folders.some((folder) => folder.path === preferredFolder)
+            preferredFolder === SCREENSHOT_FAVORITES_FOLDER ||
+            (preferredFolder &&
+                folders.some((folder) => folder.path === preferredFolder))
         ) {
             return preferredFolder;
         }
@@ -213,50 +216,6 @@ export function resolveGalleryFolder(
                 right.path.localeCompare(left.path)
         )[0];
     return latestFolder?.path || folderTree?.rootPath || folders[0]?.path || '';
-}
-
-export function normalizeDroppedFilePath(value: string) {
-    const text = value
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .find(Boolean);
-
-    if (!text) {
-        return '';
-    }
-
-    if (text.startsWith('file://')) {
-        try {
-            const url = new URL(text);
-            const pathname = decodeURIComponent(url.pathname);
-            return /^[A-Za-z]:/.test(pathname.slice(1))
-                ? pathname.slice(1)
-                : pathname;
-        } catch {
-            return text;
-        }
-    }
-
-    return text;
-}
-
-export function getDroppedScreenshotPath(event: {
-    dataTransfer?: {
-        files?: ArrayLike<{ path?: string; webkitRelativePath?: string }>;
-        getData?: (format: string) => string;
-    } | null;
-}) {
-    const file = event.dataTransfer?.files?.[0] || null;
-    const filePath = file?.path || file?.webkitRelativePath || '';
-    if (filePath) {
-        return filePath;
-    }
-
-    return normalizeDroppedFilePath(
-        event.dataTransfer?.getData?.('text/uri-list') ||
-            event.dataTransfer?.getData?.('text/plain') ||
-            ''
-    );
 }
 
 function getScreenshotSearchSortValue(row: ScreenshotSearchRow, key: string) {
@@ -423,20 +382,6 @@ export function normalizeScreenshotSearchResult(
         creationDate: result.creationDate || '',
         resolution: width > 0 && height > 0 ? `${width}x${height}` : ''
     });
-}
-
-export function pickRandomScreenshotPath(
-    images: readonly { path: string }[],
-    random: number
-) {
-    if (images.length === 0) {
-        return '';
-    }
-    const index = Math.min(
-        images.length - 1,
-        Math.max(0, Math.floor(random * images.length))
-    );
-    return images[index].path;
 }
 
 function getFolderPathFromPath(path: unknown) {

@@ -4,7 +4,7 @@
 
 **Une version Web Docker basée sur [VRCX-0](https://github.com/Map1en/VRCX-0), dont le développement est piloté par ChatGPT.**
 
-Ce fork part de la version originale **v2.32.0** et réutilise autant que possible la logique Rust, les bases de données et l’interface React. Les modifications restent limitées pour faciliter l’intégration des évolutions du projet d’origine. La branche de développement est `feat/web-headless` ; il s’agit d’une première version fonctionnelle.
+Ce fork part de la version originale **v2.33.0** et réutilise autant que possible la logique Rust, les bases de données et l’interface React. Les modifications restent limitées pour faciliter l’intégration des évolutions du projet d’origine. La branche de développement est `feat/web-headless` ; il s’agit d’une première version fonctionnelle.
 
 Le service fonctionne sur un serveur Linux sans bureau ni écran, accessible depuis un navigateur. Il est destiné à un seul utilisateur : un compte VRChat actif, avec les mêmes réglages et données partagés entre plusieurs navigateurs. ChatGPT intervient dans le développement ; aucun compte ChatGPT n’est nécessaire pour le fonctionnement de base. Les fonctions d’IA facultatives nécessitent leur propre fournisseur.
 

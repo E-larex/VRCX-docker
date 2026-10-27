@@ -8,7 +8,8 @@ import {
     commands,
     type CalendarListParams,
     type HttpApiExecuteResponse,
-    type InviteMessageType
+    type InviteMessageType,
+    type ModerationReportType
 } from '@/platform/tauri/bindings';
 import { DEFAULT_VRCHAT_API_ENDPOINT } from '@/shared/vrchatEndpoint';
 
@@ -78,6 +79,17 @@ export type InviteMessageRecord = Record<string, unknown> & {
     updatedAt?: string;
 };
 type InviteMessagesRecord = InviteMessageRecord[];
+export type ModerationReportRecord = Record<string, unknown> & {
+    id?: string;
+    type?: string;
+    category?: string;
+    reason?: string;
+    description?: string | null;
+    contentId?: string;
+    contentName?: string;
+    contentThumbnailImageUrl?: string | null;
+    created?: string;
+};
 type VrchatApiResult = HttpApiExecuteResponse;
 
 function unwrapVrchatToolsResponse<TJson = Record<string, unknown>>(
@@ -199,18 +211,54 @@ async function saveUserNote({
 
 async function reportUser({
     userId,
-    reason
+    category,
+    reason,
+    description = ''
 }: {
     userId: string;
+    category: string;
     reason: string;
+    description?: string;
 }) {
     const response = await commands.appVrchatToolsUserReport({
         userId,
-        reason
+        category,
+        reason,
+        description
+    });
+    return unwrapVrchatToolsResponse(response, 'moderationReports').json;
+}
+
+async function getModerationReports({
+    currentUserId,
+    offset,
+    closedOnly,
+    reportType
+}: {
+    currentUserId: string;
+    offset: number;
+    closedOnly: boolean;
+    reportType: ModerationReportType | null;
+}) {
+    const response = await commands.appVrchatToolsModerationReportsGet({
+        currentUserId,
+        offset,
+        closedOnly,
+        reportType
+    });
+    return unwrapVrchatToolsResponse<PageResponse<ModerationReportRecord>>(
+        response,
+        'moderationReports'
+    ).json;
+}
+
+async function deleteModerationReport({ reportId }: { reportId: string }) {
+    const response = await commands.appVrchatToolsModerationReportDelete({
+        reportId
     });
     return unwrapVrchatToolsResponse(
         response,
-        `feedback/${encodeURIComponent(userId)}/user`
+        `moderationReports/${encodeURIComponent(reportId)}`
     ).json;
 }
 
@@ -261,6 +309,8 @@ const vrchatToolsRepository = Object.freeze({
     getGroupCalendarIcs,
     saveUserNote,
     reportUser,
+    getModerationReports,
+    deleteModerationReport,
     getInviteMessages,
     editInviteMessage
 });

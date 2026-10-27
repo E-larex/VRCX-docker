@@ -69,8 +69,13 @@ fn screenshot_library_scan_emits_started_and_terminal_status_events() -> Result<
     let event_bus = RuntimeEventBus::new();
     let tasks = TaskSupervisor::new();
 
+    let favorites_db = std::sync::Arc::new(vrcx_0_persistence::DatabaseService::new(
+        &dir.path.join("VRCX-0.sqlite3"),
+    )?);
+
     let started = start_screenshot_library_scan(
         &cache,
+        favorites_db,
         dir.path.join("thumbnails"),
         event_bus.clone(),
         tasks.clone(),
@@ -710,7 +715,7 @@ fn read_zip_entry_names(path: &Path) -> Vec<String> {
     let file = std::fs::File::open(path).unwrap();
     let mut archive = zip::ZipArchive::new(file).unwrap();
     let mut names: Vec<String> = (0..archive.len())
-        .map(|index| archive.by_index(index).unwrap().name().to_string())
+        .map(|index| archive.by_index(index).unwrap().name().unwrap().to_string())
         .collect();
     names.sort();
     names

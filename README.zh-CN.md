@@ -4,7 +4,7 @@
 
 **基于原版 [VRCX-0](https://github.com/Map1en/VRCX-0)、由 ChatGPT 驱动开发的 Docker 网页版本。**
 
-本项目从原版 **v2.32.0**（`9e4e2193b88513882d3b4173e598f48eeb65092b`）衍生，网页版开发由 ChatGPT 驱动，尽可能复用原项目的 Rust 业务逻辑、数据库和 React 界面，以减少改动并方便同步上游功能。当前处于初步可用阶段。
+本项目从原版 **v2.33.0**（`2f71c1673bb2ee78015c2b6854c4047cea2ca68c`）衍生，网页版开发由 ChatGPT 驱动，尽可能复用原项目的 Rust 业务逻辑、数据库和 React 界面，以减少改动并方便同步上游功能。当前处于初步可用阶段。
 
 在无桌面环境的 Linux 上通过 Docker Compose 运行，通过浏览器访问。服务器持续记录从 VRChat 获取的好友状态等信息，关闭浏览器后仍然运行。面向单用户使用：一个活动 VRChat 账号，多个浏览器共享账号、设置和数据库。网站密码与 VRChat 密码相互独立。
 
@@ -107,7 +107,7 @@ docker compose up -d
 默认使用 `latest`。要固定版本或回滚，在 `.env` 中设置：
 
 ```dotenv
-VRCX_WEB_IMAGE=ghcr.io/e-larex/vrcx-docker:2.32.0-web.1
+VRCX_WEB_IMAGE=ghcr.io/e-larex/vrcx-docker:2.33.0-web.1
 ```
 
 再执行上述拉取和启动命令。`init-data` 和 `web` 始终使用同一镜像。镜像回滚不会回滚数据库；若更新涉及不兼容的数据迁移，应同时恢复更新前的完整数据备份。

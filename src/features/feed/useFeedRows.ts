@@ -36,6 +36,7 @@ import {
     retainFeedRowWindow,
     resolveLastFeedCursor
 } from './feedPaging';
+import { useFeedHiddenUserFilters } from './useFeedHiddenUserFilters';
 
 type UseFeedRowsOptions = {
     activeFilters: FeedFilterType[];
@@ -69,9 +70,10 @@ export function useFeedRows({
     const favoriteGroupFilterIds = usePreferencesStore(
         (state) => state.localFavoriteFriendsGroups
     );
-    const feedHiddenUsers = usePreferencesStore(
-        (state) => state.feedHiddenUsers
-    );
+    const {
+        excludedUserIds: hiddenExcludedUserIds,
+        locationHiddenUserIds: hiddenUserIds
+    } = useFeedHiddenUserFilters();
     const maxFeedRows = usePreferencesStore(
         (state) => state.tableLimits.maxTableSize
     );
@@ -112,7 +114,6 @@ export function useFeedRows({
             ),
         [favoriteGroupFilterIds, localFriendFavorites, remoteFavoritesById]
     );
-    const hiddenUserIds = feedHiddenUsers;
     const searchMode = Boolean(
         deferredSearchQuery.trim() || scopedUserIds.length || dateFrom || dateTo
     );
@@ -128,6 +129,7 @@ export function useFeedRows({
                 currentUserId,
                 favoriteUserIds,
                 feedPersistenceDisabled,
+                hiddenExcludedUserIds,
                 hiddenUserIds,
                 latestReloadToken,
                 maxFeedRows
@@ -138,6 +140,7 @@ export function useFeedRows({
             currentUserId,
             favoriteUserIds,
             feedPersistenceDisabled,
+            hiddenExcludedUserIds,
             hiddenUserIds,
             latestReloadToken,
             maxFeedRows
@@ -207,9 +210,11 @@ export function useFeedRows({
 
     const createMergeOptionsBuilder = useCallback(
         ({
+            excludedUserIds,
             locationHiddenUserIds,
             favoriteUserIds
         }: {
+            excludedUserIds: string[];
             locationHiddenUserIds: string[];
             favoriteUserIds: string[];
         }): FeedLiveMergeOptionsBuilder =>
@@ -218,6 +223,7 @@ export function useFeedRows({
                 userId: currentUserId || '',
                 search: deferredSearchQuery,
                 filters: activeFilters,
+                excludedFavoriteUserIds: excludedUserIds,
                 locationHiddenUserIds,
                 favoriteUserIds,
                 scopedUserIds,
@@ -413,6 +419,7 @@ export function useFeedRows({
                     userId: currentUserId,
                     search: deferredSearchQuery,
                     filters: activeFilters,
+                    excludedFavoriteUserIds: hiddenExcludedUserIds,
                     locationHiddenUserIds: hiddenUserIds,
                     favoriteUserIds,
                     scopedUserIds,
@@ -442,6 +449,7 @@ export function useFeedRows({
             .queryFeedLatest({
                 userId: currentUserId,
                 filters: activeFilters,
+                excludedFavoriteUserIds: hiddenExcludedUserIds,
                 locationHiddenUserIds: hiddenUserIds,
                 favoriteUserIds,
                 scopedUserIds,
@@ -453,6 +461,7 @@ export function useFeedRows({
                     return;
                 }
                 const buildMergeOptions = createMergeOptionsBuilder({
+                    excludedUserIds: hiddenExcludedUserIds,
                     locationHiddenUserIds: hiddenUserIds,
                     favoriteUserIds
                 });
@@ -510,6 +519,7 @@ export function useFeedRows({
         favoriteUserIds,
         favoritesOnly,
         feedPersistenceDisabled,
+        hiddenExcludedUserIds,
         hiddenUserIds,
         isFavoritesLoaded,
         latestReloadToken,
@@ -530,6 +540,7 @@ export function useFeedRows({
             const minLiveSequence = lastLiveFeedSequenceRef.current;
             mergeFeedRowsWithLiveEntries({
                 buildMergeOptions: createMergeOptionsBuilder({
+                    excludedUserIds: hiddenExcludedUserIds,
                     locationHiddenUserIds: hiddenUserIds,
                     favoriteUserIds
                 }),
@@ -562,6 +573,7 @@ export function useFeedRows({
         createMergeOptionsBuilder,
         currentUserId,
         favoriteUserIds,
+        hiddenExcludedUserIds,
         hiddenUserIds,
         preferencesReady,
         searchMode
@@ -586,6 +598,7 @@ export function useFeedRows({
             .queryFeedPage({
                 userId: currentUserId,
                 filters: activeFilters,
+                excludedFavoriteUserIds: hiddenExcludedUserIds,
                 locationHiddenUserIds: hiddenUserIds,
                 favoriteUserIds,
                 favoritesOnly,
@@ -625,6 +638,7 @@ export function useFeedRows({
         favoritesOnly,
         feedPersistenceDisabled,
         hasMore,
+        hiddenExcludedUserIds,
         hiddenUserIds,
         loadingOlder,
         loadStatus,

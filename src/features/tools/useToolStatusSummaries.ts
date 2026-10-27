@@ -34,6 +34,7 @@ import {
     TOOLS_STATUS_UPDATED_EVENT
 } from '@/shared/constants/tools';
 import { isRecord } from '@/shared/utils/record';
+import { useInventoryBundleStore } from '@/state/inventoryBundleStore';
 import { useOfflineRecordStore } from '@/state/offlineRecordStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -307,6 +308,9 @@ export function useToolStatusSummaries(): Map<string, ToolStatusSummary> {
     const backupOutcomeRevision = useProfileBackupStore(
         (state) => state.status.lastOutcome?.revision ?? -1
     );
+    const unopenedBundleCount = useInventoryBundleStore(
+        (state) => state.bundleIds.length
+    );
     const [statusByToolKey, setStatusByToolKey] = useState(
         () => new Map<string, ToolStatusSummary>()
     );
@@ -336,9 +340,27 @@ export function useToolStatusSummaries(): Map<string, ToolStatusSummary> {
             currentUserId,
             t
         );
-        if (!offlineRecord) {
+        if (!offlineRecord && unopenedBundleCount === 0) {
             return statusByToolKey;
         }
-        return new Map(statusByToolKey).set('offline-record', offlineRecord);
-    }, [currentUserId, offlineRecordProbe, statusByToolKey, t]);
+        const next = new Map(statusByToolKey);
+        if (offlineRecord) {
+            next.set('offline-record', offlineRecord);
+        }
+        if (unopenedBundleCount > 0) {
+            next.set('inventory', {
+                label: t('view.tools.status.unopened_bundles', {
+                    count: unopenedBundleCount
+                }),
+                tone: 'active'
+            });
+        }
+        return next;
+    }, [
+        currentUserId,
+        offlineRecordProbe,
+        statusByToolKey,
+        t,
+        unopenedBundleCount
+    ]);
 }

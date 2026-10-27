@@ -138,6 +138,7 @@ export async function loadPreferenceSnapshot() {
         desktopNotificationAvatars,
         notificationDoNotDisturbEndOnGameStart,
         busyStatusDoNotDisturb,
+        hideVideoErrorNotifications,
         notificationTTS,
         notificationTTSNickName,
         notificationTTSNameMode,
@@ -156,6 +157,7 @@ export async function loadPreferenceSnapshot() {
         hmdNotificationPosition,
         hmdNotificationStyle,
         hmdNotificationAvatars,
+        hmdNotificationTrackerDisconnect,
         desktopWidgetOpacity,
         desktopWidgetNewestOnTop,
         webhookEnabled,
@@ -204,6 +206,7 @@ export async function loadPreferenceSnapshot() {
         localFavoriteFriendsGroups,
         feedHiddenUsers,
         feedHiddenUsersHideNotifications,
+        feedHiddenUsersHideAll,
         hidePrivateFromFeed,
         activityFilterProfiles,
         feedTimeDisplayMode,
@@ -297,6 +300,7 @@ export async function loadPreferenceSnapshot() {
             true
         ),
         configRepository.getBool('busyStatusDoNotDisturb', true),
+        configRepository.getBool('hideVideoErrorNotifications', false),
         configRepository.getString('notificationTTS', 'Never'),
         configRepository.getBool('notificationTTSNickName', false),
         configRepository.getString('notificationTTSNameMode', ''),
@@ -315,6 +319,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getString('hmdNotificationPosition', 'bottom'),
         configRepository.getString('hmdNotificationStyle', 'standard'),
         configRepository.getBool('hmdNotificationAvatars', true),
+        configRepository.getBool('hmdNotificationTrackerDisconnect', true),
         configRepository.getInt('desktopWidgetOpacity', 55),
         configRepository.getBool('desktopWidgetNewestOnTop', true),
         configRepository.getBool('webhookEnabled', false),
@@ -378,6 +383,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getArray('localFavoriteFriendsGroups', []),
         configRepository.getString('feedHiddenUsers', '[]'),
         configRepository.getBool('feedHiddenUsersHideNotifications', true),
+        configRepository.getBool('feedHiddenUsersHideAll', false),
         configRepository.getBool('hidePrivateFromFeed', false),
         commands.appNotificationActivityFiltersGet(),
         configRepository.getString('feedTimeDisplayMode', 'relative'),
@@ -534,6 +540,7 @@ export async function loadPreferenceSnapshot() {
             notificationDoNotDisturbEndOnGameStart
         ),
         busyStatusDoNotDisturb: Boolean(busyStatusDoNotDisturb),
+        hideVideoErrorNotifications: Boolean(hideVideoErrorNotifications),
         notificationTTS: notificationTTS || 'Never',
         notificationTTSNickName: Boolean(notificationTTSNickName),
         notificationTTSNameMode: normalizeNotificationTtsNameMode(
@@ -570,6 +577,9 @@ export async function loadPreferenceSnapshot() {
         hmdNotificationStyle:
             normalizeHmdNotificationStyle(hmdNotificationStyle),
         hmdNotificationAvatars: Boolean(hmdNotificationAvatars),
+        hmdNotificationTrackerDisconnect: Boolean(
+            hmdNotificationTrackerDisconnect
+        ),
         desktopWidgetOpacity: Number.isFinite(desktopWidgetOpacity)
             ? Math.min(100, Math.max(0, desktopWidgetOpacity))
             : 55,
@@ -631,6 +641,7 @@ export async function loadPreferenceSnapshot() {
         feedHiddenUsersHideNotifications: Boolean(
             feedHiddenUsersHideNotifications
         ),
+        feedHiddenUsersHideAll: Boolean(feedHiddenUsersHideAll),
         hidePrivateFromFeed: Boolean(hidePrivateFromFeed),
         overlayActivityFilters: activityFilterProfiles.wrist,
         vrNotificationActivityFilters: activityFilterProfiles.vr,

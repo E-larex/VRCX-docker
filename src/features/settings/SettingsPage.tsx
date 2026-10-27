@@ -22,6 +22,7 @@ import {
 import { isWebHost } from '@/platform/host';
 import { Tabs, TabsList, TabsTrigger } from '@/ui/shadcn/tabs';
 
+import { RestartPendingNotice } from './components/RestartPendingNotice';
 import { SettingsAdvancedTab } from './components/settings-tabs/SettingsAdvancedTab';
 import { SettingsAiTab } from './components/settings-tabs/SettingsAiTab';
 import { SettingsFeedbackTab } from './components/settings-tabs/SettingsFeedbackTab';
@@ -69,6 +70,7 @@ function SettingsPageContent() {
                 <PageTitle>{t('view.settings.header')}</PageTitle>
                 <PageDescription>{t('view.settings.subtitle')}</PageDescription>
             </PageHeader>
+            <RestartPendingNotice />
             <Tabs
                 orientation="vertical"
                 value={shell.activeSettingsTab}

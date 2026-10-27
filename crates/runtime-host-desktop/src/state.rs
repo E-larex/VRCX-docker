@@ -615,6 +615,7 @@ impl DesktopRuntimeHostState {
         );
         let screenshots = DesktopScreenshotRuntime::new(
             game.screenshot_cache.clone(),
+            Arc::clone(runtime.database()),
             desktop.host_file_access.clone(),
             runtime.paths().clone(),
             vrcx_0_host_desktop::vrchat_paths::vrchat_photos_location(),
@@ -2021,6 +2022,7 @@ impl DesktopRuntimeHostState {
     ) -> vrcx_0_core::screenshots::ScreenshotLibraryScanStatus {
         vrcx_0_outbound_adapters::screenshots::start_screenshot_library_scan(
             &self.game.screenshot_cache,
+            Arc::clone(self.runtime.database()),
             self.runtime.paths().screenshot_thumbs.clone(),
             self.runtime.desktop_assembly().event_bus().clone(),
             self.runtime.desktop_assembly().tasks().clone(),
@@ -2440,10 +2442,13 @@ impl DesktopRuntimeProfileExtension {
                 if let Err(error) = community_theme.initialize().await {
                     tracing::warn!(error = %error, "failed to initialize community theme runtime");
                 }
-                if let Err(error) = background_image.initialize().await {
-                    tracing::warn!(error = %error, "failed to initialize background image runtime");
-                }
-                background_image.run_rotation_loop(stop_token).await;
+                let background_image_runtime = async {
+                    if let Err(error) = background_image.initialize().await {
+                        tracing::warn!(error = %error, "failed to initialize background image runtime");
+                    }
+                    background_image.run_rotation_loop(stop_token).await;
+                };
+                tokio::join!(community_theme.check_for_updates(), background_image_runtime);
             });
     }
 

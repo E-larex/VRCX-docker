@@ -18,6 +18,7 @@ import {
     convertFileUrlToImageUrl,
     openExternalLink
 } from '@/services/entityMediaService';
+import { recordToolOpen } from '@/services/telemetry/telemetryToolUsage';
 import { toast } from '@/services/toastService';
 import { vrchatGroupUrl } from '@/shared/constants/vrchatWebUrls';
 import { useDialogStore } from '@/state/dialogStore';
@@ -56,14 +57,17 @@ import {
     resolveGroupDialogTab
 } from './groupDialogUtils';
 import { shouldShowGroupBadgeValue } from './GroupDialogViewParts';
+import { GroupEventEditorDialog } from './GroupEventEditorDialog';
 import { staffRoleIdsOf } from './GroupMembersPanel';
 import { GroupPostEditorDialog } from './GroupPostEditorDialog';
 import { GroupProfileEditDialog } from './GroupProfileEditDialog';
+import { GroupRolesDialog } from './GroupRolesDialog';
 import { useGroupDialogLanguageRows } from './useGroupDialogLanguageRows';
 import { useGroupDialogMembers } from './useGroupDialogMembers';
 import { useGroupDialogPosts } from './useGroupDialogPosts';
 import type { GroupPostForm } from './useGroupDialogPosts';
 import { useGroupDialogTabbedRuntimeState } from './useGroupDialogTabbedRuntimeState';
+import { useGroupEventEditor } from './useGroupEventEditor';
 
 let lastGroupDialogTab = 'overview';
 
@@ -158,7 +162,7 @@ export function GroupDialogTabbedView({
     const groupEventsRequestRef = useRef(0);
     const groupFollowingRequestRef = useRef(0);
     const followingEventIdsRef = useRef<Set<string>>(new Set());
-    const tabs = getGroupDialogTabs(t);
+    const tabs = getGroupDialogTabs(t, Boolean(group.storeId));
     const posts =
         remoteStatus.posts === 'ready'
             ? remoteData.posts
@@ -193,6 +197,12 @@ export function GroupDialogTabbedView({
         isGroupOwner || hasGroupPermission(group, 'group-announcement-manage');
     const canInviteToGroup =
         isGroupOwner || hasGroupPermission(group, 'group-invites-manage');
+    const canManageCalendar =
+        isGroupOwner || hasGroupPermission(group, 'group-calendar-manage');
+    const canManageRoles =
+        hasGroupPermission(group, 'group-roles-manage') ||
+        hasGroupPermission(group, 'group-default-role-manage');
+    const [rolesOpen, setRolesOpen] = useState(false);
     const canModerateGroup = hasGroupModerationPermission(group);
     const profileUpdate = groupProfileUpdateFromGroup(group);
     const canEditProfile =
@@ -218,6 +228,7 @@ export function GroupDialogTabbedView({
         setSearch({ posts: '' });
         setProfileEditorOpen(false);
         setProfileMediaOpen(false);
+        setRolesOpen(false);
         const nextTab = resolveGroupDialogTab(tabs, lastGroupDialogTab);
         lastGroupDialogTab = nextTab;
         setActiveTab(nextTab);
@@ -639,6 +650,14 @@ export function GroupDialogTabbedView({
         setRemoteStatus
     });
 
+    const eventEditor = useGroupEventEditor({
+        group,
+        confirm,
+        onChanged: () => {
+            loadGroupEvents({ force: true });
+        }
+    });
+
     const headerModel = {
         actionStatus,
         canDelete,
@@ -646,7 +665,9 @@ export function GroupDialogTabbedView({
         canEditProfile,
         canJoin,
         canLeave,
+        canManageCalendar,
         canManagePosts,
+        canManageRoles,
         canModerateGroup,
         canSetVisibility,
         detail,
@@ -676,6 +697,8 @@ export function GroupDialogTabbedView({
             copyGroupText(group.name, t('dialog.group.info.name')),
         onCopyGroupUrl: () =>
             copyGroupText(groupUrl, t('dialog.group.info.url')),
+        onCreateGroupEvent: eventEditor.openCreate,
+        onOpenRoles: () => setRolesOpen(true),
         onCreateGroupPost: createGroupPost,
         onEditProfile: () => setProfileEditorOpen(true),
         onEditProfileMedia: () => setProfileMediaOpen(true),
@@ -684,6 +707,7 @@ export function GroupDialogTabbedView({
         onLeave,
         onOpenGroupPage: () => openExternalLink(groupUrl),
         onOpenModeration: () => {
+            recordToolOpen('group-moderation');
             closeDialog();
             navigate(`/tools/group-moderation/${group.id}`);
         },
@@ -700,6 +724,7 @@ export function GroupDialogTabbedView({
         activeTab,
         announcement,
         bannerUrl,
+        canManageCalendar,
         canManagePosts,
         currentUserId,
         filteredPosts,
@@ -725,6 +750,11 @@ export function GroupDialogTabbedView({
         onChangeTab: changeTab,
         onCopyGroupUrl: () =>
             copyGroupText(groupUrl, t('dialog.group.info.url')),
+        onCreateEvent: eventEditor.openCreate,
+        onDeleteEvent: (event) => {
+            void eventEditor.remove(getEventId(event), event.title || '');
+        },
+        onEditEvent: eventEditor.openEdit,
         onDeletePost: (post) => {
             deleteGroupPost(post);
         },
@@ -805,6 +835,33 @@ export function GroupDialogTabbedView({
                 onSubmit={(form: GroupPostForm) => {
                     submitGroupPost(form);
                 }}
+            />
+            <GroupEventEditorDialog
+                open={canManageCalendar && Boolean(eventEditor.form)}
+                initialForm={eventEditor.form}
+                group={group}
+                saving={eventEditor.saving}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        eventEditor.close();
+                    }
+                }}
+                onSubmit={(form) => {
+                    void eventEditor.submit(form);
+                }}
+                onDelete={() => {
+                    const form = eventEditor.form;
+                    if (form) {
+                        void eventEditor.remove(form.eventId, form.title);
+                    }
+                }}
+            />
+            <GroupRolesDialog
+                open={isMember && rolesOpen}
+                group={group}
+                currentUserId={currentUserId}
+                onOpenChange={setRolesOpen}
+                onChanged={onRefresh}
             />
             <GroupProfileEditDialog
                 open={canEditProfile && profileEditorOpen}

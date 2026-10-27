@@ -55,7 +55,8 @@ import {
 import {
     firstText,
     resolveInstanceRows,
-    resolveLaunchLocation
+    resolveLaunchLocation,
+    worldInstanceEntries
 } from './WorldDialogViewParts';
 
 export type { WorldWorldScreenshots } from './useWorldDialogScreenshots';
@@ -275,7 +276,7 @@ export function WorldDialogTabbedView({
     }, [instanceRows, world]);
     const instanceData = useWorldDialogInstanceData({
         endpoint: currentEndpoint,
-        sourceRevision: world.instances,
+        sourceRevision: worldInstanceEntries(world),
         targets: instanceDetailTargets
     });
     const instanceDetailsByLocation = instanceData.detailsByLocation;
@@ -385,6 +386,9 @@ export function WorldDialogTabbedView({
               ]
             : []),
         { value: 'info', label: t('dialog.world.info.header') },
+        ...(typeof world.storeId === 'string' && world.storeId
+            ? [{ value: 'store', label: t('economy.store_header') }]
+            : []),
         { value: 'json', label: t('dialog.world.json.header') }
     ];
 

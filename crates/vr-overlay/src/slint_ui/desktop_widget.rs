@@ -93,6 +93,8 @@ impl SlintDesktopWidgetHost {
         self.window.dispatch_event(WindowEvent::ScaleFactorChanged {
             scale_factor: scale,
         });
+        self.window
+            .set_size(PhysicalSize::new(self.width, self.height));
         self.window.request_redraw();
     }
 

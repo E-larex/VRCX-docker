@@ -356,6 +356,8 @@ export function AvatarDialogTabbedView({
         onOpenCache,
         onDeleteCache,
         onUploadGallery,
+        onMoveGalleryImage,
+        onDeleteGalleryImage,
         onEditDetails,
         onChangeContentTags,
         onChangeImage,
@@ -610,6 +612,8 @@ export function AvatarDialogTabbedView({
                         fileAnalysis={fileAnalysis}
                         hasImposter={hasImposter}
                         imposterVersion={imposterVersion}
+                        listings={listings}
+                        avatarUrl={avatarUrl}
                         onOpenAuthor={openAvatarAuthor}
                         onSaveMemo={onSaveMemo}
                     />
@@ -627,12 +631,24 @@ export function AvatarDialogTabbedView({
                         media={{
                             galleryImages,
                             currentGalleryImage,
-                            galleryIndex,
-                            listings
+                            galleryIndex
                         }}
                         onOpenGalleryPreview={openGalleryPreview}
                         onGalleryIndexChange={setGalleryIndex}
                         onUploadGallery={onUploadGallery}
+                        onMoveGalleryImage={(direction) => {
+                            const index = galleryIndex;
+                            void onMoveGalleryImage(index, direction).then(
+                                (moved) => {
+                                    if (moved) {
+                                        setGalleryIndex(index + direction);
+                                    }
+                                }
+                            );
+                        }}
+                        onDeleteGalleryImage={() =>
+                            onDeleteGalleryImage(galleryIndex)
+                        }
                     />
                     <EntityDialogTabContent value="json">
                         <EntityRawJson value={avatar} />

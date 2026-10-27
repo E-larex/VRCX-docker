@@ -185,9 +185,11 @@ export interface UserHeaderModel {
     actionStatus: string;
     appearanceVisibility: UserDialogProfileAppearanceVisibility;
     avatarOverrideState: AvatarOverrideState;
+    bannerColor: string;
     bannerFallbackUrl: string;
     canInviteFromCurrentLocation: boolean;
     currentAvatarTarget: string;
+    currentUserAccountStanding: string;
     currentUserBoopingEnabled: boolean;
     detail: string;
     extendedModerationState: ExtendedModerationState;
@@ -224,9 +226,7 @@ export interface UserHeaderCommands {
     onCopyUsername?: () => void;
     onCopyUserUrl: () => void;
     onEditMemo: () => void;
-    onEditSelfProfileDetails: () => void;
-    onEditSelfProfileMedia: () => void;
-    onEditSelfProfileDecorations: () => void;
+    onEditSelfProfile: () => void;
     onEditSelfStatus: () => void;
     onExtendedModeration: (
         type: ExtendedModerationType,
@@ -247,7 +247,8 @@ export interface UserHeaderCommands {
     onOpenUserIcon: () => void;
     onOpenUserUrl: () => void;
     onRefresh: () => void;
-    onReportHacking: () => void;
+    onReportUser: () => void;
+    onShowAccountStanding: () => void;
     onShowAvatarAuthor: () => void;
     onShowInstanceHistory: () => void;
     onToggleBadgeShowcased: (
@@ -510,9 +511,11 @@ export function UserDialogHeaderSection({
         actionStatus = 'idle',
         appearanceVisibility,
         avatarOverrideState,
+        bannerColor,
         bannerFallbackUrl,
         canInviteFromCurrentLocation,
         currentAvatarTarget,
+        currentUserAccountStanding,
         currentUserBoopingEnabled,
         detail,
         extendedModerationState,
@@ -548,9 +551,7 @@ export function UserDialogHeaderSection({
         onCopyUsername,
         onCopyUserUrl,
         onEditMemo,
-        onEditSelfProfileDetails,
-        onEditSelfProfileMedia,
-        onEditSelfProfileDecorations,
+        onEditSelfProfile,
         onEditSelfStatus,
         onExtendedModeration,
         onFriendRequest,
@@ -568,7 +569,8 @@ export function UserDialogHeaderSection({
         onOpenUserIcon,
         onOpenUserUrl,
         onRefresh,
-        onReportHacking,
+        onReportUser,
+        onShowAccountStanding,
         onShowAvatarAuthor,
         onShowInstanceHistory,
         onToggleBadgeShowcased,
@@ -584,6 +586,7 @@ export function UserDialogHeaderSection({
         avatarOverrideState,
         canInviteFromCurrentLocation,
         currentAvatarTarget,
+        currentUserAccountStanding,
         currentUserBoopingEnabled,
         extendedModerationState,
         fallbackAvatarTarget,
@@ -599,9 +602,7 @@ export function UserDialogHeaderSection({
         onAvatarOverride,
         onBoop,
         onEditMemo,
-        onEditSelfProfileDetails,
-        onEditSelfProfileMedia,
-        onEditSelfProfileDecorations,
+        onEditSelfProfile,
         onEditSelfStatus,
         onExtendedModeration,
         onFriendRequest,
@@ -614,7 +615,8 @@ export function UserDialogHeaderSection({
         onModeration,
         onOpenFallbackAvatar,
         onRefresh,
-        onReportHacking,
+        onReportUser,
+        onShowAccountStanding,
         onShowAvatarAuthor,
         onShowInstanceHistory,
         onUnfriend
@@ -683,6 +685,7 @@ export function UserDialogHeaderSection({
                 <UserDialogHeaderMedia
                     key={profile.id}
                     bannerAlt={profile.displayName || profile.id || 'User'}
+                    bannerColor={bannerColor}
                     bannerFallbackUrl={bannerFallbackUrl}
                     bannerUrl={imageUrl}
                     iconFrame={

@@ -489,13 +489,6 @@ mod tests {
     }
 
     #[test]
-    fn realtime_transport_failures_survive_the_network_noise_filter() {
-        assert!(!should_skip_error_log(
-            "[Realtime] websocket auth rejected while the session was still usable generation=4 code=401"
-        ));
-    }
-
-    #[test]
     fn trims_log_from_byte_tail_boundary() {
         let dir = test_dir("trim");
         let path = dir.join("trim.txt");

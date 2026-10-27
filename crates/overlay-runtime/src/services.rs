@@ -27,4 +27,6 @@ pub trait VrOverlayRuntimeServices: Send + Sync {
     fn game_log_snapshot(&self) -> RuntimeSnapshot;
 
     fn now_playing(&self) -> NowPlayingSnapshot;
+
+    fn game_started_at(&self) -> Option<String>;
 }

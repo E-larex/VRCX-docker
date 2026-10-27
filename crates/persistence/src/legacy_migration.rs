@@ -1,8 +1,10 @@
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use rusqlite::{Connection, OpenFlags};
 
+use crate::config::{read_preserved_config, write_preserved_config};
 use crate::database::{backup_connection_to_path, remove_sidecars};
 use crate::legacy_vrcx::{LegacyVrcxDiscovery, LegacyVrcxSource};
 use crate::Error;
@@ -13,7 +15,6 @@ const STAGED_FLAG_CONTENTS: &[u8] = b"staged-v1";
 const STAGING_DIRECTORY: &str = "legacy-migration-staging";
 const STAGED_DATABASE_FILE: &str = "VRCX-0.sqlite3";
 const STAGED_CONFIG_FILE: &str = "VRCX-0.json";
-const PRESERVED_CONFIG_KEYS: [&str; 1] = ["config:vrcx_telemetryinstallid"];
 
 pub fn cleanup_legacy_updater_files(app_data: &Path) {
     for file_name in ["update.exe", "VRCX-0_Setup.exe", "tempDownload"] {
@@ -41,14 +42,31 @@ pub fn consume_pending_legacy_migration(paths: &LegacyMigrationPaths) -> Result<
 pub fn request_legacy_migration(paths: &LegacyMigrationPaths) -> Result<(), Error> {
     let flag_path = paths.app_data.join(PENDING_MIGRATION_FILE);
     let temporary = paths.app_data.join(format!("{PENDING_MIGRATION_FILE}.tmp"));
-    std::fs::write(&temporary, STAGED_FLAG_CONTENTS)?;
-    std::fs::OpenOptions::new()
-        .write(true)
-        .open(&temporary)?
-        .sync_all()?;
-    crate::profile_backup::replace_file_atomically(&temporary, &flag_path)?;
-    crate::profile_backup::sync_directory_durable(&paths.app_data)?;
+    step(
+        "write migration flag",
+        std::fs::write(&temporary, STAGED_FLAG_CONTENTS)
+            .and_then(|()| std::fs::OpenOptions::new().write(true).open(&temporary))
+            .and_then(|file| file.sync_all()),
+    )?;
+    step(
+        "replace migration flag",
+        crate::profile_backup::replace_file_atomically(&temporary, &flag_path),
+    )?;
+    step(
+        "sync app data directory",
+        crate::profile_backup::sync_directory_durable(&paths.app_data),
+    )?;
     Ok(())
+}
+
+fn step<T, E: Into<Error>>(name: &str, result: Result<T, E>) -> Result<T, Error> {
+    result.map_err(|error| match error.into() {
+        Error::Io(error) => Error::Io(std::io::Error::new(
+            error.kind(),
+            format!("{name}: {error}"),
+        )),
+        error => error,
+    })
 }
 
 pub fn prepare_legacy_migration(
@@ -60,9 +78,15 @@ pub fn prepare_legacy_migration(
     let pending_flag = paths.app_data.join(PENDING_MIGRATION_FILE);
     let _ = std::fs::remove_file(&pending_flag);
     if staging_dir.exists() {
-        std::fs::remove_dir_all(&staging_dir)?;
+        step(
+            "remove staging directory",
+            std::fs::remove_dir_all(&staging_dir),
+        )?;
     }
-    std::fs::create_dir_all(&staging_dir)?;
+    step(
+        "create staging directory",
+        std::fs::create_dir_all(&staging_dir),
+    )?;
 
     let result = (|| {
         copy_database_snapshot(
@@ -184,48 +208,6 @@ fn install_staged_legacy_vrcx_data(
     Ok(())
 }
 
-fn read_preserved_config(db_file: &Path) -> Vec<(String, String)> {
-    if !db_file.is_file() {
-        return Vec::new();
-    }
-    let connection = match Connection::open(db_file) {
-        Ok(connection) => connection,
-        Err(error) => {
-            tracing::warn!(error = %error, "failed to read config preserved across legacy migration");
-            return Vec::new();
-        }
-    };
-    PRESERVED_CONFIG_KEYS
-        .iter()
-        .filter_map(|key| {
-            connection
-                .query_row("SELECT value FROM configs WHERE key = ?1", [key], |row| {
-                    row.get::<_, String>(0)
-                })
-                .ok()
-                .map(|value| (key.to_string(), value))
-        })
-        .collect()
-}
-
-fn write_preserved_config(db_file: &Path, entries: &[(String, String)]) {
-    if entries.is_empty() {
-        return;
-    }
-    let result = Connection::open(db_file).and_then(|connection| {
-        for (key, value) in entries {
-            connection.execute(
-                "INSERT OR REPLACE INTO configs (key, value) VALUES (?1, ?2)",
-                [key, value],
-            )?;
-        }
-        Ok(())
-    });
-    if let Err(error) = result {
-        tracing::warn!(error = %error, "failed to carry config across legacy migration");
-    }
-}
-
 fn copy_database_snapshot(
     from: &Path,
     to: &Path,
@@ -247,17 +229,29 @@ fn copy_database_snapshot(
         file_name.to_string_lossy()
     ));
     if temporary.exists() {
-        std::fs::remove_file(&temporary)?;
+        step(
+            "remove database temporary file",
+            std::fs::remove_file(&temporary),
+        )?;
     }
-    backup_connection_to_path(&source, &temporary, on_progress)?;
-    remove_sidecars(to)?;
-    let replace_result = crate::profile_backup::replace_file_atomically(&temporary, to);
+    step(
+        "copy database",
+        backup_connection_to_path(&source, &temporary, on_progress),
+    )?;
+    step("remove database sidecars", remove_sidecars(to))?;
+    let replace_result = step(
+        "replace database",
+        crate::profile_backup::replace_file_atomically(&temporary, to),
+    );
     if replace_result.is_err() {
         let _ = std::fs::remove_file(&temporary);
     }
     replace_result?;
     if let Some(parent) = to.parent() {
-        crate::profile_backup::sync_directory_durable(parent)?;
+        step(
+            "sync database directory",
+            crate::profile_backup::sync_directory_durable(parent),
+        )?;
     }
     Ok(())
 }
@@ -278,17 +272,29 @@ fn copy_replace(from: PathBuf, to: PathBuf) -> Result<(), Error> {
         file_name.to_string_lossy()
     ));
     if temporary.exists() {
-        std::fs::remove_file(&temporary)?;
+        step(
+            "remove config temporary file",
+            std::fs::remove_file(&temporary),
+        )?;
     }
     let result = (|| {
-        std::fs::copy(&from, &temporary)?;
-        std::fs::OpenOptions::new()
-            .write(true)
-            .open(&temporary)?
-            .sync_all()?;
-        crate::profile_backup::replace_file_atomically(&temporary, &to)?;
+        let contents = step("read config", std::fs::read(&from))?;
+        step(
+            "write config",
+            std::fs::File::create(&temporary).and_then(|mut file| {
+                file.write_all(&contents)?;
+                file.sync_all()
+            }),
+        )?;
+        step(
+            "replace config",
+            crate::profile_backup::replace_file_atomically(&temporary, &to),
+        )?;
         if let Some(parent) = to.parent() {
-            crate::profile_backup::sync_directory_durable(parent)?;
+            step(
+                "sync config directory",
+                crate::profile_backup::sync_directory_durable(parent),
+            )?;
         }
         Ok(())
     })();

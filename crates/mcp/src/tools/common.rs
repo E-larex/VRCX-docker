@@ -48,7 +48,7 @@ impl schemars::JsonSchema for TimeWindowParams {
             "oneOf": [
                 {
                     "type": "string",
-                    "description": "Relative window such as 90d or this week, a four-digit calendar year such as 2026, or all history."
+                    "description": "Relative window such as 90d or this week, a four-digit calendar year such as 2026, this year or last year, a UTC calendar month such as 2026-10, a UTC calendar day such as 2026-10-18, or all history."
                 },
                 {
                     "type": "integer",
@@ -154,6 +154,15 @@ fn parse_relative_window(text: &str) -> Result<TimeWindowParams, String> {
             .map_err(|_| format!("unrecognized timeWindow string '{text}'"))
             .and_then(calendar_year_window);
     }
+    if let Ok(date) = chrono::NaiveDate::parse_from_str(&normalized, "%Y-%m-%d") {
+        return calendar_day_window(date);
+    }
+    if normalized.len() == 7 && normalized.as_bytes()[4] == b'-' {
+        if let Ok(date) = chrono::NaiveDate::parse_from_str(&format!("{normalized}-01"), "%Y-%m-%d")
+        {
+            return calendar_month_window(date);
+        }
+    }
     let now = Utc::now();
     let rfc = |dt: DateTime<Utc>| Some(dt.to_rfc3339());
     let window = |from, to| TimeWindowParams { from, to };
@@ -183,6 +192,10 @@ fn parse_relative_window(text: &str) -> Result<TimeWindowParams, String> {
                 rfc(start_of_month(now)),
             ));
         }
+        "this year" | "year" => return calendar_year_window(i64::from(now.year())),
+        "last year" | "past year" | "previous year" => {
+            return calendar_year_window(i64::from(now.year()) - 1);
+        }
         _ => {}
     }
 
@@ -210,6 +223,31 @@ fn calendar_year_window(year: i64) -> Result<TimeWindowParams, String> {
         from: Some(from.to_rfc3339()),
         to: Some(to.to_rfc3339()),
     })
+}
+
+fn calendar_day_window(date: chrono::NaiveDate) -> Result<TimeWindowParams, String> {
+    let next = date
+        .succ_opt()
+        .ok_or_else(|| "timeWindow calendar day is out of range".to_string())?;
+    Ok(utc_date_range_window(date, next))
+}
+
+fn calendar_month_window(first_day: chrono::NaiveDate) -> Result<TimeWindowParams, String> {
+    let next = first_day
+        .checked_add_months(chrono::Months::new(1))
+        .ok_or_else(|| "timeWindow calendar month is out of range".to_string())?;
+    Ok(utc_date_range_window(first_day, next))
+}
+
+fn utc_date_range_window(from: chrono::NaiveDate, to: chrono::NaiveDate) -> TimeWindowParams {
+    let start_of = |day: chrono::NaiveDate| {
+        Utc.from_utc_datetime(&day.and_time(chrono::NaiveTime::MIN))
+            .to_rfc3339()
+    };
+    TimeWindowParams {
+        from: Some(start_of(from)),
+        to: Some(start_of(to)),
+    }
 }
 
 fn parse_rolling_window(text: &str, now: DateTime<Utc>) -> Option<TimeWindowParams> {
@@ -588,6 +626,53 @@ mod time_window_tests {
             let window = time_window_from_value(&value).unwrap();
             assert_eq!(window.from.as_deref(), Some("2026-01-01T00:00:00+00:00"));
             assert_eq!(window.to.as_deref(), Some("2027-01-01T00:00:00+00:00"));
+        }
+    }
+
+    #[test]
+    fn calendar_day_string_covers_that_utc_day() {
+        let window = time_window_from_value(&serde_json::json!("2026-10-18")).unwrap();
+        assert_eq!(window.from.as_deref(), Some("2026-10-18T00:00:00+00:00"));
+        assert_eq!(window.to.as_deref(), Some("2026-10-19T00:00:00+00:00"));
+    }
+
+    #[test]
+    fn calendar_month_string_covers_that_utc_month() {
+        let window = time_window_from_value(&serde_json::json!("2026-10")).unwrap();
+        assert_eq!(window.from.as_deref(), Some("2026-10-01T00:00:00+00:00"));
+        assert_eq!(window.to.as_deref(), Some("2026-11-01T00:00:00+00:00"));
+
+        let window = time_window_from_value(&serde_json::json!("2026-12")).unwrap();
+        assert_eq!(window.from.as_deref(), Some("2026-12-01T00:00:00+00:00"));
+        assert_eq!(window.to.as_deref(), Some("2027-01-01T00:00:00+00:00"));
+    }
+
+    #[test]
+    fn invalid_calendar_month_is_rejected() {
+        let error = time_window_from_value(&serde_json::json!("2026-13")).unwrap_err();
+        assert!(error.contains("unrecognized timeWindow string"));
+    }
+
+    #[test]
+    fn this_and_last_year_cover_whole_utc_years() {
+        let year = Utc::now().year();
+        for (phrase, expected) in [
+            ("this year", year),
+            ("This Year", year),
+            ("last year", year - 1),
+            ("previous year", year - 1),
+        ] {
+            let window = time_window_from_value(&serde_json::json!(phrase)).unwrap();
+            assert_eq!(
+                window.from,
+                Some(format!("{expected}-01-01T00:00:00+00:00")),
+                "{phrase}"
+            );
+            assert_eq!(
+                window.to,
+                Some(format!("{}-01-01T00:00:00+00:00", expected + 1)),
+                "{phrase}"
+            );
         }
     }
 

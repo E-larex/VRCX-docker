@@ -7,6 +7,7 @@ import type {
 } from './galleryConstants';
 import type {
     GalleryAssetActionDeps,
+    GalleryAuthTarget,
     GalleryUploadOptions
 } from './galleryTypes';
 import { buildPrintUploadParams } from './galleryUploadParams';
@@ -33,6 +34,7 @@ export function createGalleryAssetActions({
     isVrcPlusSupporter,
     mediaRepository,
     parseEmojiUploadSettings,
+    readClipboardUploadImage,
     readFileAsBase64,
     setAssets,
     setCropRequest,
@@ -224,13 +226,33 @@ export function createGalleryAssetActions({
         }
         throw new Error(`Unsupported upload target: ${tab}`);
     }
-    async function uploadSelectedFile(event: ChangeEvent<HTMLInputElement>) {
+    function uploadSelectedFile(event: ChangeEvent<HTMLInputElement>) {
         const file = event.target.files?.[0] || null;
         event.target.value = '';
         if (!file) {
             return;
         }
-        const tab = uploadTargetRef.current || activeTab;
+        requestUpload(
+            file,
+            uploadTargetRef.current || activeTab,
+            uploadAuthTargetRef.current || getAuthTarget()
+        );
+    }
+    function uploadDroppedFile(file: File) {
+        requestUpload(file, activeTab, getAuthTarget());
+    }
+    async function pasteClipboardUpload(tab: GalleryUploadTarget) {
+        const authTarget = getAuthTarget();
+        const file = await readClipboardUploadImage(t);
+        if (file) {
+            requestUpload(file, tab, authTarget);
+        }
+    }
+    function requestUpload(
+        file: File,
+        tab: GalleryUploadTarget,
+        authTarget: GalleryAuthTarget
+    ) {
         if (tab !== 'gallery' && tab !== 'icons' && !isVrcPlusSupporter) {
             toast.add({ type: 'error', title: t('message.vrcplus.required') });
             return;
@@ -238,7 +260,6 @@ export function createGalleryAssetActions({
         if (!validateImageFile(file, t)) {
             return;
         }
-        const authTarget = uploadAuthTargetRef.current || getAuthTarget();
         if (!isRuntimeAuthTarget(authTarget)) {
             return;
         }
@@ -410,6 +431,8 @@ export function createGalleryAssetActions({
         refreshAll,
         beginUpload,
         uploadSelectedFile,
+        uploadDroppedFile,
+        pasteClipboardUpload,
         confirmCroppedUpload,
         deleteFileAsset
     };

@@ -4,7 +4,7 @@ English | [Français](README.fr-FR.md) | [简体中文](README.zh-CN.md) | [繁�
 
 **A Docker web edition based on the original [VRCX-0](https://github.com/Map1en/VRCX-0), with development driven by ChatGPT.**
 
-This fork starts from upstream **v2.32.0** (`9e4e2193b88513882d3b4173e598f48eeb65092b`). It reuses the original Rust business logic, databases, and React interface, keeping changes small to make future upstream updates easier. This is an initial working version.
+This fork starts from upstream **v2.33.0** (`2f71c1673bb2ee78015c2b6854c4047cea2ca68c`). It reuses the original Rust business logic, databases, and React interface, keeping changes small to make future upstream updates easier. This is an initial working version.
 
 Run it on a Linux server without a desktop or display, then access it in a browser. The server keeps collecting friend status and other information from VRChat after the browser closes. It is designed for a single user: one active VRChat account shared across multiple browser sessions, with shared settings and data. The website password is separate from your VRChat password.
 
@@ -110,7 +110,7 @@ docker compose pull
 docker compose up -d
 ```
 
-To pin a release or roll back, set `VRCX_WEB_IMAGE=ghcr.io/e-larex/vrcx-docker:2.32.0-web.1` in `.env`, then run the pull and start commands above. Both services use the same image. Rolling back an image does not roll back the database; restore the complete pre-update backup if a migration is incompatible with the older version.
+To pin a release or roll back, set `VRCX_WEB_IMAGE=ghcr.io/e-larex/vrcx-docker:2.33.0-web.1` in `.env`, then run the pull and start commands above. Both services use the same image. Rolling back an image does not roll back the database; restore the complete pre-update backup if a migration is incompatible with the older version.
 
 Use `docker compose down` to stop the deployment. Start again with the command above. Back up `./data` before updates.
 
