@@ -14,7 +14,9 @@ Replace the example with an unpublished version. `2.35.0` identifies the upstrea
 
 For the first beta of a Web revision, use `v2.35.0-web.1-beta.1` in both commands above. Further test releases increment `beta.M`; the stable release drops the beta suffix. Tag the commit containing the release workflow changes, not an earlier commit.
 
-Release runs frontend lint, type checking and tests, isolated Web Rust tests, a separate desktop runtime check with default features, and the browser checks described in [DEVELOPMENT.md](DEVELOPMENT.md#continuous-integration). It then builds the `linux/amd64` image, checks initialization, non-root execution, static content and `/health`, and runs LAN authentication and persistence checks across container recreation using temporary data volumes. Only that tested image is pushed to GHCR. No real VRChat credentials are used; the health check does not verify VRChat login or third-party integrations.
+Release looks up the `master` push CI run for the exact tagged commit and waits up to 20 minutes for an active run. From a successful run it reuses each passing group of checks: frontend lint, type checking and tests; Web Rust and browser tests; and desktop runtime compatibility. A skipped or missing group runs during release. If there is no successful matching run or GitHub cannot return its results, all three groups run during release. See [the CI job definitions](.github/workflows/ci.yml).
+
+Release imports available CI and release Docker build caches when it builds the `linux/amd64` image, checks initialization, non-root execution, static content and `/health`, and runs LAN authentication and persistence checks across container recreation using temporary data volumes. Only that tested image is pushed to GHCR. No real VRChat credentials are used; the health check does not verify VRChat login or third-party integrations.
 
 Images receive the Git tag without its leading `v`, `sha-<full-commit>` and a channel tag:
 

@@ -17,8 +17,14 @@ jobs:
     metadata:
         name: Validate Web Release
         runs-on: ubuntu-24.04
-        timeout-minutes: 5
+        timeout-minutes: 25
+        permissions:
+            contents: read
+            actions: read
         outputs:
+            frontend_ci: ${{ steps.ci.outputs.frontend }}
+            web_ci: ${{ steps.ci.outputs.web }}
+            desktop_ci: ${{ steps.ci.outputs.desktop }}
             image: ${{ steps.release.outputs.image }}
             version: ${{ steps.release.outputs.version }}
             sha_tag: ${{ steps.release.outputs.sha_tag }}
@@ -36,12 +42,18 @@ jobs:
             - name: Resolve image metadata
               id: release
               run: node scripts/web-release.ts metadata
+            - name: Check master CI results for the tagged commit
+              id: ci
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: node scripts/web-release.ts ci-checks
 
     frontend:
         name: Web Frontend Checks
         needs: metadata
         runs-on: ubuntu-24.04
         timeout-minutes: 20
+        if: needs.metadata.outputs.frontend_ci != 'true'
         steps:
             - uses: actions/checkout@v7
               with:
@@ -58,6 +70,7 @@ jobs:
         needs: metadata
         runs-on: ubuntu-24.04
         timeout-minutes: 60
+        if: needs.metadata.outputs.web_ci != 'true' || needs.metadata.outputs.desktop_ci != 'true'
         steps:
             - uses: actions/checkout@v7
               with:
@@ -68,14 +81,23 @@ jobs:
             - uses: Swatinem/rust-cache@v2
               with:
                   shared-key: release-web-tests
-            - run: cargo test --locked -p vrcx-0-web
+            - if: needs.metadata.outputs.web_ci != 'true'
+              run: cargo test --locked -p vrcx-0-web
             - name: Check desktop runtime with default features separately
+              if: needs.metadata.outputs.desktop_ci != 'true'
               run: cargo check --locked -p vrcx-0-runtime-host-desktop
             - uses: ./.github/actions/check-web-browser
+              if: needs.metadata.outputs.web_ci != 'true'
 
     image:
         name: Publish Web Image
         needs: [metadata, frontend, backend]
+        if: >-
+            !cancelled() && needs.metadata.result == 'success' &&
+            (needs.frontend.result == 'success' ||
+             (needs.frontend.result == 'skipped' && needs.metadata.outputs.frontend_ci == 'true')) &&
+            (needs.backend.result == 'success' ||
+             (needs.backend.result == 'skipped' && needs.metadata.outputs.web_ci == 'true' && needs.metadata.outputs.desktop_ci == 'true'))
         runs-on: ubuntu-24.04
         timeout-minutes: 120
         permissions:
@@ -113,7 +135,9 @@ jobs:
                       org.opencontainers.image.version=${{ env.VERSION }}
                       org.opencontainers.image.revision=${{ github.sha }}
                       org.opencontainers.image.licenses=GPL-3.0-only
-                  cache-from: type=gha,scope=release-web-amd64
+                  cache-from: |
+                      type=gha,scope=ci-web-amd64
+                      type=gha,scope=release-web-amd64
                   cache-to: type=gha,scope=release-web-amd64,mode=max
             - name: Test container startup with Compose
               run: bash scripts/smoke-web-image.sh "$IMAGE:$VERSION"

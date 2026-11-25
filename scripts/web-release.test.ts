@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { assertUnpublished, webReleaseMetadata } from './web-release';
+import {
+    assertUnpublished,
+    reusableCiChecks,
+    webReleaseMetadata
+} from './web-release';
 
 const sha = 'a'.repeat(40);
 const release = webReleaseMetadata('v2.32.0-web.1', 'E-larex/VRCX-docker', sha);
@@ -126,4 +130,119 @@ describe('published version protection', () => {
             assertUnpublished(release, 'actor', 'github-token')
         ).rejects.toThrow('Network unavailable');
     });
+});
+
+describe('release checks covered by master CI', () => {
+    const run = {
+        id: 42,
+        run_attempt: 2,
+        head_sha: sha,
+        head_branch: 'master',
+        event: 'push',
+        status: 'completed',
+        conclusion: 'success'
+    };
+    const none = { frontend: false, web: false, desktop: false };
+    const check = () => reusableCiChecks('owner/repo', sha, 'test-token');
+    afterEach(() => vi.useRealTimers());
+
+    it('uses successful jobs from the matching workflow attempt and reruns skipped checks', async () => {
+        const api = vi
+            .fn()
+            .mockResolvedValueOnce(Response.json({ workflow_runs: [run] }))
+            .mockResolvedValueOnce(
+                Response.json({
+                    jobs: [
+                        { name: 'Web Frontend Checks', conclusion: 'success' },
+                        { name: 'Web Rust Checks', conclusion: 'skipped' },
+                        {
+                            name: 'Desktop Runtime Compatibility',
+                            conclusion: 'success'
+                        }
+                    ]
+                })
+            );
+        vi.stubGlobal('fetch', api);
+        expect(await check()).toEqual({
+            frontend: true,
+            web: false,
+            desktop: true
+        });
+        expect(api.mock.calls[0]?.[0]).toBe(
+            `https://api.github.com/repos/owner/repo/actions/workflows/ci.yml/runs?event=push&branch=master&head_sha=${sha}&per_page=1`
+        );
+        expect(api.mock.calls[1]?.[0]).toBe(
+            'https://api.github.com/repos/owner/repo/actions/runs/42/attempts/2/jobs?per_page=100'
+        );
+    });
+
+    it.each([
+        { head_sha: 'b'.repeat(40) },
+        { head_branch: 'other' },
+        { event: 'pull_request' },
+        { conclusion: 'failure' },
+        { conclusion: 'cancelled' }
+    ])('runs release checks for an ineligible result %j', async (override) => {
+        const api = vi
+            .fn()
+            .mockResolvedValueOnce(
+                Response.json({ workflow_runs: [{ ...run, ...override }] })
+            );
+        vi.stubGlobal('fetch', api);
+        expect(await check()).toEqual(none);
+        expect(api).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits for a CI run started at the same time as the tag', async () => {
+        vi.useFakeTimers();
+        const api = vi
+            .fn()
+            .mockResolvedValueOnce(Response.json({ workflow_runs: [] }))
+            .mockResolvedValueOnce(
+                Response.json({
+                    workflow_runs: [
+                        { ...run, status: 'in_progress', conclusion: null }
+                    ]
+                })
+            )
+            .mockResolvedValueOnce(Response.json({ workflow_runs: [run] }))
+            .mockResolvedValueOnce(
+                Response.json({
+                    jobs: [{ name: 'Web Rust Checks', conclusion: 'success' }]
+                })
+            );
+        vi.stubGlobal('fetch', api);
+        const result = check();
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(await result).toEqual({ ...none, web: true });
+    });
+
+    it.each(['missing', 'timeout', 'api error'])(
+        'falls back to release checks on %s',
+        async (scenario) => {
+            vi.useFakeTimers();
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(async () =>
+                    scenario === 'api error'
+                        ? new Response(null, { status: 503 })
+                        : Response.json({
+                              workflow_runs:
+                                  scenario === 'missing'
+                                      ? []
+                                      : [
+                                            {
+                                                ...run,
+                                                status: 'queued',
+                                                conclusion: null
+                                            }
+                                        ]
+                          })
+                )
+            );
+            const result = check();
+            await vi.runAllTimersAsync();
+            expect(await result).toEqual(none);
+        }
+    );
 });

@@ -89,23 +89,124 @@ export async function assertUnpublished(
     );
 }
 
+type CiRun = {
+    id: number;
+    run_attempt: number;
+    head_sha: string;
+    head_branch: string;
+    event: string;
+    status: string;
+    conclusion: string | null;
+};
+
+export async function reusableCiChecks(
+    repository: string,
+    sha: string,
+    token: string
+) {
+    const fallback = { frontend: false, web: false, desktop: false };
+    const api = `https://api.github.com/repos/${repository}/actions`;
+    async function get<T>(endpoint: string): Promise<T> {
+        const response = await fetch(`${api}/${endpoint}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            redirect: 'error',
+            signal: AbortSignal.timeout(15_000)
+        });
+        if (!response.ok) throw new Error(`GitHub API HTTP ${response.status}`);
+        return (await response.json()) as T;
+    }
+
+    const query = new URLSearchParams({
+        event: 'push',
+        branch: 'master',
+        head_sha: sha,
+        per_page: '1'
+    });
+    const deadline = Date.now() + 20 * 60_000;
+    try {
+        for (let attempt = 0; Date.now() < deadline; attempt++) {
+            const runs: { workflow_runs: CiRun[] } = await get(
+                `workflows/ci.yml/runs?${query}`
+            );
+            const run = runs.workflow_runs[0];
+            if (!run) {
+                // A tag pushed with master can arrive before the CI run appears.
+                if (attempt > 0) return fallback;
+            } else {
+                if (
+                    run.head_sha !== sha ||
+                    run.head_branch !== 'master' ||
+                    run.event !== 'push'
+                ) {
+                    return fallback;
+                }
+                if (run.status === 'completed') {
+                    if (run.conclusion !== 'success') return fallback;
+                    const result: {
+                        jobs: { name: string; conclusion: string | null }[];
+                    } = await get(
+                        `runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100`
+                    );
+                    const passed = new Set(
+                        result.jobs
+                            .filter((job) => job.conclusion === 'success')
+                            .map((job) => job.name)
+                    );
+                    console.log(
+                        `Using CI results from https://github.com/${repository}/actions/runs/${run.id}`
+                    );
+                    return {
+                        frontend: passed.has('Web Frontend Checks'),
+                        web: passed.has('Web Rust Checks'),
+                        desktop: passed.has('Desktop Runtime Compatibility')
+                    };
+                }
+                if (attempt === 0) {
+                    console.log(`Waiting for master CI run ${run.id}`);
+                }
+            }
+            await new Promise((resolve) => setTimeout(resolve, 30_000));
+        }
+    } catch (error) {
+        console.warn(
+            'Could not verify master CI results:',
+            error instanceof Error ? error.message : 'request failed'
+        );
+    }
+    return fallback;
+}
+
+function writeOutputs(values: Record<string, string | boolean>): void {
+    const output = Object.entries(values)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n');
+    console.log(output);
+    if (process.env.GITHUB_OUTPUT) {
+        fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+    }
+}
+
 async function main() {
+    const repository = process.env.GITHUB_REPOSITORY ?? '';
+    const sha = process.env.GITHUB_SHA ?? '';
     const release = webReleaseMetadata(
         process.env.GITHUB_REF_NAME ?? '',
-        process.env.GITHUB_REPOSITORY ?? '',
-        process.env.GITHUB_SHA ?? ''
+        repository,
+        sha
     );
     switch (process.argv[2]) {
-        case 'metadata': {
-            const output = Object.entries(release)
-                .map(([key, value]) => `${key}=${value}`)
-                .join('\n');
-            console.log(output);
-            if (process.env.GITHUB_OUTPUT) {
-                fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
-            }
+        case 'metadata':
+            writeOutputs(release);
             break;
-        }
+        case 'ci-checks':
+            writeOutputs(
+                await reusableCiChecks(
+                    repository,
+                    sha,
+                    process.env.GH_TOKEN ?? ''
+                )
+            );
+            break;
         case 'check-unpublished':
             await assertUnpublished(
                 release,
@@ -114,7 +215,9 @@ async function main() {
             );
             break;
         default:
-            throw new Error('Usage: web-release.ts metadata|check-unpublished');
+            throw new Error(
+                'Usage: web-release.ts metadata|ci-checks|check-unpublished'
+            );
     }
 }
 
