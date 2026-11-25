@@ -10,7 +10,7 @@ Thanks for your interest in VRCX-0. Please read this before opening a pull reque
 
 Small, focused fixes (clear bugs, typos, localization, obvious correctness issues) are always welcome and don't need a prior issue.
 
-For localization work, download a DevKit build from the [package-devkit workflow](https://github.com/Map1en/VRCX-0/actions/workflows/package-devkit.yml) and use it to load local translations for review. Please also check the [localization glossary](src/localization/GLOSSARY.md) to keep domain terms consistent.
+For localization work, download a DevKit build from the [package-devkit workflow](https://github.com/Map1en/VRCX-0/actions/workflows/devkit.yml) and use it to load local translations for review. Please also check the [localization glossary](src/localization/GLOSSARY.md) to keep domain terms consistent.
 
 ## Using AI to write your PR
 
@@ -29,8 +29,7 @@ Agreement](CLA.md) before their pull requests can be merged.
 
 The CLA does not transfer copyright ownership. You keep the copyright to your own
 contributions. It grants the project maintainer broad rights to use, modify,
-distribute, and relicense your contributions, including for possible closed-source
-or mobile distributions.
+distribute, and relicense your contributions.
 
 It's a one-click process: when you open a PR, the CLA bot comments with
 instructions and you sign by posting a single comment. You only need to sign

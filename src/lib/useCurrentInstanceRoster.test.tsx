@@ -162,6 +162,53 @@ describe('useCurrentInstanceRoster', () => {
         expect(mocks.loadCurrentInstanceRoster).toHaveBeenCalledTimes(2);
     });
 
+    it('ignores unrelated profile changes but refreshes when the effective name changes', async () => {
+        const loaded = snapshot('wrld_test:1', 'Player One');
+        loaded.context.playerFactsKnown = true;
+        mocks.loadCurrentInstanceRoster.mockResolvedValue(loaded);
+        const { result, rerender } = renderHook(
+            ({ displayName, username, statusDescription }) =>
+                useCurrentInstanceRoster({
+                    ...props('wrld_test:1'),
+                    currentUserSnapshot: {
+                        id: 'usr_self',
+                        displayName,
+                        username,
+                        statusDescription
+                    }
+                }),
+            {
+                initialProps: {
+                    displayName: 'Current User',
+                    username: 'account',
+                    statusDescription: 'before'
+                }
+            }
+        );
+        await waitFor(() => expect(result.current.loadStatus).toBe('ready'));
+
+        rerender({
+            displayName: 'Current User',
+            username: 'other-account',
+            statusDescription: 'after'
+        });
+        await act(async () => {});
+        expect(mocks.loadCurrentInstanceRoster).toHaveBeenCalledTimes(1);
+        expect(mocks.recordGameRuntimePresence).toHaveBeenCalledTimes(1);
+
+        rerender({
+            displayName: '',
+            username: 'Fallback Name',
+            statusDescription: 'after'
+        });
+        await waitFor(() =>
+            expect(result.current.playerRows[0]?.displayName).toBe(
+                'Fallback Name'
+            )
+        );
+        expect(mocks.loadCurrentInstanceRoster).toHaveBeenCalledTimes(2);
+    });
+
     it('does not let an older location request overwrite the active roster', async () => {
         const oldRequest = deferred<Snapshot>();
         const activeRequest = deferred<Snapshot>();
@@ -229,5 +276,64 @@ describe('useCurrentInstanceRoster', () => {
 
         await waitFor(() => expect(result.current.loadStatus).toBe('ready'));
         expect(result.current.playerRows).toEqual([]);
+    });
+
+    it('keeps the loaded roster and ready status when a refresh returns the same instance', async () => {
+        mocks.loadCurrentInstanceRoster.mockResolvedValue(
+            snapshot('wrld_test:1', 'Player One')
+        );
+        const statuses: string[] = [];
+        const { result, rerender } = renderHook(
+            ({ revision }: { revision: number }) => {
+                const roster = useCurrentInstanceRoster({
+                    ...props('wrld_test:1'),
+                    refreshRevision: revision,
+                    tailSyncRevision: '0'
+                });
+                statuses.push(roster.loadStatus);
+                return roster;
+            },
+            { initialProps: { revision: 0 } }
+        );
+        await waitFor(() => expect(result.current.loadStatus).toBe('ready'));
+        const { context, playerRows } = result.current;
+        statuses.length = 0;
+
+        rerender({ revision: 1 });
+        await waitFor(() =>
+            expect(mocks.loadCurrentInstanceRoster).toHaveBeenCalledTimes(2)
+        );
+        await act(async () => {});
+
+        expect(statuses).not.toContain('running');
+        expect(result.current.context).toBe(context);
+        expect(result.current.playerRows).toBe(playerRows);
+        expect(mocks.recordGameRuntimePresence).toHaveBeenCalledTimes(2);
+    });
+
+    it('shows loading again when refreshing a different instance', async () => {
+        mocks.loadCurrentInstanceRoster.mockResolvedValueOnce(
+            snapshot('wrld_test:1', 'Player One')
+        );
+        const next = deferred<Snapshot>();
+        mocks.loadCurrentInstanceRoster.mockReturnValueOnce(next.promise);
+        const { result, rerender } = renderHook(
+            ({ location }: { location: string }) =>
+                useCurrentInstanceRoster({
+                    ...props(location),
+                    refreshRevision: 0,
+                    tailSyncRevision: '0'
+                }),
+            { initialProps: { location: 'wrld_test:1' } }
+        );
+        await waitFor(() => expect(result.current.loadStatus).toBe('ready'));
+
+        rerender({ location: 'wrld_test:2' });
+
+        expect(result.current.loadStatus).toBe('running');
+        await act(async () => {
+            next.resolve(snapshot('wrld_test:2', 'Player Two'));
+        });
+        expect(result.current.loadStatus).toBe('ready');
     });
 });

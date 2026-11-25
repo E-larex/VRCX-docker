@@ -27,11 +27,10 @@ import userProfileRepository from '@/repositories/userProfileRepository';
 import { openUserDialog } from '@/services/dialogService';
 import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
 import { useRuntimeStore } from '@/state/runtimeStore';
-import { HintTooltip } from '@/ui/hint-tooltip';
+import { HintTooltip, IntentTooltip } from '@/ui/hint-tooltip';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 import { Separator } from '@/ui/shadcn/separator';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import {
     getGroupRoleNameMap,
@@ -231,42 +230,33 @@ function PostCard({
                                 />
                             ) : null}
                             {post.createdAt ? (
-                                <Tooltip>
-                                    <TooltipTrigger
-                                        render={
-                                            <span>
-                                                {formatRelativeTime(
-                                                    post.createdAt
-                                                )}
-                                            </span>
-                                        }
-                                    />
-                                    <TooltipContent>
-                                        {formatDateFilter(
-                                            post.createdAt,
-                                            'long'
-                                        )}
-                                    </TooltipContent>
-                                </Tooltip>
+                                <IntentTooltip
+                                    content={formatDateFilter(
+                                        post.createdAt,
+                                        'long'
+                                    )}
+                                >
+                                    <span>
+                                        {formatRelativeTime(post.createdAt)}
+                                    </span>
+                                </IntentTooltip>
                             ) : null}
                             {edited ? (
-                                <Tooltip>
-                                    <TooltipTrigger
-                                        render={
-                                            <span>
-                                                ·{' '}
-                                                {t('dialog.group.posts.edited')}
-                                            </span>
-                                        }
-                                    />
-                                    <TooltipContent>
-                                        {t('dialog.group.posts.edited_at')}
-                                        {formatDateFilter(
-                                            post.updatedAt,
-                                            'long'
-                                        )}
-                                    </TooltipContent>
-                                </Tooltip>
+                                <IntentTooltip
+                                    content={
+                                        <>
+                                            {t('dialog.group.posts.edited_at')}
+                                            {formatDateFilter(
+                                                post.updatedAt,
+                                                'long'
+                                            )}
+                                        </>
+                                    }
+                                >
+                                    <span>
+                                        · {t('dialog.group.posts.edited')}
+                                    </span>
+                                </IntentTooltip>
                             ) : null}
                             {edited &&
                             post.editorId &&
@@ -284,25 +274,24 @@ function PostCard({
                         </div>
                         <div className="ml-auto flex shrink-0 items-center gap-1">
                             {roleNames.length ? (
-                                <Tooltip>
-                                    <TooltipTrigger
-                                        render={
-                                            <Badge
-                                                variant="outline"
-                                                className="max-w-48"
-                                            >
-                                                <EyeIcon data-icon="inline-start" />
-                                                <span className="truncate">
-                                                    {roleNames.join(', ')}
-                                                </span>
-                                            </Badge>
-                                        }
-                                    />
-                                    <TooltipContent>
-                                        {t('dialog.group.posts.visibility')}
-                                        {roleNames.join(', ')}
-                                    </TooltipContent>
-                                </Tooltip>
+                                <IntentTooltip
+                                    content={
+                                        <>
+                                            {t('dialog.group.posts.visibility')}
+                                            {roleNames.join(', ')}
+                                        </>
+                                    }
+                                >
+                                    <Badge
+                                        variant="outline"
+                                        className="max-w-48"
+                                    >
+                                        <EyeIcon data-icon="inline-start" />
+                                        <span className="truncate">
+                                            {roleNames.join(', ')}
+                                        </span>
+                                    </Badge>
+                                </IntentTooltip>
                             ) : null}
                             <div className="flex items-center opacity-0 transition-opacity group-focus-within/post:opacity-100 group-hover/post:opacity-100">
                                 {action}

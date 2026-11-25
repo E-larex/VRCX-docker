@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use specta::Type;
 
+use crate::approvals::AssistantApproval;
 use crate::charts::AssistantChart;
 use crate::config::PlaybookMode;
 use crate::endpoints::AssistantRuntimeSelection;
@@ -48,6 +49,9 @@ pub struct ToolResultRecord {
     pub entities: Vec<Entity>,
     #[serde(default)]
     pub charts: Vec<AssistantChart>,
+    /// The user declined the approval card, so the call never ran.
+    #[serde(default)]
+    pub denied: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub screenshots: Option<AssistantScreenshots>,
 }
@@ -152,9 +156,9 @@ pub struct Session {
     pub title: String,
     pub messages: Vec<Message>,
     pub active_turn: Option<ActiveTurn>,
+    pub pending_approval: Option<AssistantApproval>,
     pub endpoint_id: Option<String>,
     pub model: Option<String>,
-    pub allow_writes: bool,
     pub playbook_mode: PlaybookMode,
     pub entity_panel_open: bool,
     pub surfaced_entities: Vec<Entity>,
@@ -178,9 +182,9 @@ struct StoredSession {
     title: String,
     pinned: bool,
     active_turn: Option<ActiveTurn>,
+    pending_approval: Option<AssistantApproval>,
     endpoint_id: Option<String>,
     model: Option<String>,
-    allow_writes: bool,
     playbook_mode: PlaybookMode,
     entity_panel_open: bool,
     surfaced_entities: Vec<Entity>,
@@ -195,9 +199,9 @@ impl StoredSession {
             title: self.title.clone(),
             messages,
             active_turn: self.active_turn.clone(),
+            pending_approval: self.pending_approval.clone(),
             endpoint_id: self.endpoint_id.clone(),
             model: self.model.clone(),
-            allow_writes: self.allow_writes,
             playbook_mode: self.playbook_mode,
             entity_panel_open: self.entity_panel_open,
             surfaced_entities: self.surfaced_entities.clone(),
@@ -320,9 +324,9 @@ impl SessionStore {
                             title: entry.title,
                             pinned: entry.pinned,
                             active_turn: None,
+                            pending_approval: None,
                             endpoint_id: optional_string(entry.endpoint_id),
                             model: optional_string(entry.model),
-                            allow_writes: entry.allow_writes,
                             playbook_mode: PlaybookMode::parse(&entry.playbook_mode),
                             entity_panel_open: entry.entity_panel_open,
                             surfaced_entities: serde_json::from_str(&entry.surfaced_entities)
@@ -500,9 +504,9 @@ impl SessionStore {
             title: String::new(),
             pinned: false,
             active_turn: None,
+            pending_approval: None,
             endpoint_id: normalize_optional(runtime.endpoint_id),
             model: normalize_optional(runtime.model),
-            allow_writes: runtime.allow_writes,
             playbook_mode: runtime.playbook_mode,
             entity_panel_open: false,
             surfaced_entities: Vec::new(),
@@ -707,6 +711,26 @@ impl SessionStore {
             .get(session_id)
             .and_then(|session| session.active_turn.as_ref())
             .is_some_and(|turn| turn.turn_id == turn_id)
+    }
+
+    /// Records the approval card a running turn is waiting on, so a reloaded
+    /// window can show it again.
+    pub(crate) fn set_pending_approval(&self, session_id: &str, approval: AssistantApproval) {
+        if let Some(session) = self.state.lock().unwrap().sessions.get_mut(session_id) {
+            session.pending_approval = Some(approval);
+        }
+    }
+
+    pub(crate) fn clear_pending_approval(&self, session_id: &str, approval_id: &str) {
+        if let Some(session) = self.state.lock().unwrap().sessions.get_mut(session_id) {
+            if session
+                .pending_approval
+                .as_ref()
+                .is_some_and(|approval| approval.id == approval_id)
+            {
+                session.pending_approval = None;
+            }
+        }
     }
 
     pub fn push_message(
@@ -922,7 +946,6 @@ fn persist_runtime(
         id: session_id,
         endpoint_id: session.endpoint_id.as_deref(),
         model: session.model.as_deref(),
-        allow_writes: session.allow_writes,
         playbook_mode: session.playbook_mode.as_config_str(),
     }) {
         tracing::warn!(%error, "assistant: failed to persist runtime selection");
@@ -932,7 +955,6 @@ fn persist_runtime(
 fn apply_runtime(session: &mut StoredSession, runtime: AssistantRuntimeSelection) {
     session.endpoint_id = normalize_optional(runtime.endpoint_id);
     session.model = normalize_optional(runtime.model);
-    session.allow_writes = runtime.allow_writes;
     session.playbook_mode = runtime.playbook_mode;
 }
 

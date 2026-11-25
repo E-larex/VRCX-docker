@@ -10,18 +10,13 @@ use vrcx_0_contracts::llm::{LlmEndpointDetectModelsResult, LlmRequestOptions, To
 use vrcx_0_mcp::{spawn_in_process_tools, InProcessMcpTools, McpRuntime};
 
 use crate::agent::{run_turn, TurnContext};
+use crate::approvals::{tool_definitions, PendingApprovals, ToolApprovalPolicy};
 use crate::choices::PendingChoices;
 use crate::config::{should_apply_playbook, PlaybookMode};
 use crate::endpoints::{
     resolve_reasoning_effort, AssistantRuntimeSelection, AssistantRuntimeStatus, EndpointStore,
     LlmEndpointDetectModelsInput, LlmEndpointDto, LlmEndpointUpsertInput, LlmTranslateInput,
 };
-
-/// Tools that mutate state (local DB or the VRChat account). They are hidden
-/// from the model unless the user has explicitly armed writes, so a prompt
-/// injection in attacker-controlled data (e.g. a friend's bio) cannot drive an
-/// autonomous write.
-const WRITE_TOOLS: &[&str] = &["favorite_local", "favorite_vrchat", "set_friend_note"];
 use crate::error::AssistantError;
 use crate::events::AssistantEmitter;
 use crate::ports::{AssistantConfig, AssistantLlmClientFactory, AssistantSessionPersistence};
@@ -35,8 +30,10 @@ pub struct AssistantController {
     tasks: TaskSupervisor,
     tools: Arc<InProcessMcpTools>,
     tool_defs: Arc<Vec<ToolDefinition>>,
+    approval_policy: Arc<ToolApprovalPolicy>,
     sessions: Arc<SessionStore>,
     choices: PendingChoices,
+    approvals: PendingApprovals,
     auth_scope: RuntimeAuthScope,
     cancels: Arc<Mutex<HashMap<String, (String, CancellationToken)>>>,
 }
@@ -63,15 +60,17 @@ impl AssistantController {
     pub async fn new(deps: AssistantControllerDeps) -> Result<Self, AssistantError> {
         let endpoints = EndpointStore::new(deps.config, deps.llm_factory, deps.proxy_url);
         let tools = Arc::new(spawn_in_process_tools(deps.mcp_runtime).await?);
-        let tool_defs = Arc::new(load_tool_defs(&tools).await?);
+        let (tool_defs, approval_policy) = tool_definitions(tools.list_tools().await?);
         Ok(Self {
             endpoints,
             bus: deps.bus,
             tasks: deps.tasks,
             tools,
-            tool_defs,
+            tool_defs: Arc::new(tool_defs),
+            approval_policy: Arc::new(approval_policy),
             sessions: Arc::new(SessionStore::with_persistence(deps.session_persistence)),
             choices: PendingChoices::default(),
+            approvals: PendingApprovals::default(),
             auth_scope: deps.auth_scope,
             cancels: Arc::new(Mutex::new(HashMap::new())),
         })
@@ -124,11 +123,9 @@ impl AssistantController {
         session_id: &str,
         endpoint_id: Option<String>,
         model: Option<String>,
-        allow_writes: bool,
         playbook_mode: PlaybookMode,
     ) -> Result<Session, AssistantError> {
-        let selection =
-            self.set_default_runtime(endpoint_id, model, allow_writes, playbook_mode)?;
+        let selection = self.set_default_runtime(endpoint_id, model, playbook_mode)?;
         self.sessions
             .set_runtime(&self.owner_user_id(), session_id, selection)
             .map_err(AssistantError::from)?
@@ -139,13 +136,11 @@ impl AssistantController {
         &self,
         endpoint_id: Option<String>,
         model: Option<String>,
-        allow_writes: bool,
         playbook_mode: PlaybookMode,
     ) -> Result<AssistantRuntimeSelection, AssistantError> {
         let selection = AssistantRuntimeSelection {
             endpoint_id,
             model,
-            allow_writes,
             playbook_mode,
         };
         self.endpoints.set_last_selection(&selection)?;
@@ -219,6 +214,15 @@ impl AssistantController {
         }
     }
 
+    pub fn answer_approval(&self, session_id: &str, approval_id: &str, approved: bool) {
+        if self
+            .sessions
+            .is_visible_to(session_id, &self.owner_user_id())
+        {
+            self.approvals.answer(session_id, approval_id, approved);
+        }
+    }
+
     fn cancel_visible(&self, session_id: &str) {
         if let Some((_, token)) = self.cancels.lock().unwrap().remove(session_id) {
             token.cancel();
@@ -267,8 +271,6 @@ impl AssistantController {
             forbid_tool_calls: false,
         };
 
-        let tool_defs = visible_tool_defs(&self.tool_defs, session.allow_writes);
-
         let session_id = session.id.clone();
         let turn_id = format!("turn_{}", random_hex());
 
@@ -307,6 +309,8 @@ impl AssistantController {
             tools: Arc::clone(&self.tools),
             sessions: Arc::clone(&self.sessions),
             choices: self.choices.clone(),
+            approvals: self.approvals.clone(),
+            approval_policy: Arc::clone(&self.approval_policy),
             emitter: AssistantEmitter::new(
                 self.bus.clone(),
                 owner_user_id,
@@ -314,7 +318,7 @@ impl AssistantController {
                 turn_id.clone(),
             ),
             client,
-            tool_defs,
+            tool_defs: Arc::clone(&self.tool_defs),
             session_id: session_id.clone(),
             turn_id: turn_id.clone(),
             locale,
@@ -344,35 +348,6 @@ impl AssistantController {
     }
 }
 
-fn visible_tool_defs(
-    tool_defs: &Arc<Vec<ToolDefinition>>,
-    allow_writes: bool,
-) -> Arc<Vec<ToolDefinition>> {
-    if allow_writes {
-        return Arc::clone(tool_defs);
-    }
-    Arc::new(
-        tool_defs
-            .iter()
-            .filter(|tool| !WRITE_TOOLS.contains(&tool.name.as_str()))
-            .cloned()
-            .collect(),
-    )
-}
-
-async fn load_tool_defs(tools: &InProcessMcpTools) -> Result<Vec<ToolDefinition>, AssistantError> {
-    Ok(tools
-        .list_tools()
-        .await?
-        .into_iter()
-        .map(|tool| ToolDefinition {
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.parameters,
-        })
-        .collect())
-}
-
 /// Removes the per-session cancel token when a turn task finishes, but only if
 /// it still owns the slot — a turn superseded by a newer one must not evict the
 /// newer turn's token (which would leave the new turn uncancellable).
@@ -398,27 +373,6 @@ impl Drop for CancelCleanup {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn write_tools_stay_hidden_unless_writes_are_armed() {
-        let tool_defs = Arc::new(
-            [
-                "get_copresence_summary",
-                "favorite_local",
-                "favorite_vrchat",
-                "set_friend_note",
-            ]
-            .map(|name| crate::test_support::tool_def(name, serde_json::Value::Null))
-            .to_vec(),
-        );
-
-        let hidden = visible_tool_defs(&tool_defs, false);
-        let names: Vec<&str> = hidden.iter().map(|tool| tool.name.as_str()).collect();
-        assert_eq!(names, vec!["get_copresence_summary"]);
-
-        let armed = visible_tool_defs(&tool_defs, true);
-        assert_eq!(armed.len(), tool_defs.len());
-    }
 
     #[test]
     fn superseded_turn_cleanup_keeps_newer_cancel_token() {

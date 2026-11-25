@@ -382,16 +382,32 @@
     }
 }
 
-:root[data-theme-color]:not([data-theme-color='default']) {
+:root[data-theme-color]:not([data-theme-color='default']):not(
+        [data-vrcx-0-community-theme-accent='theme']
+    ) {
     --primary: var(--vrcx-theme-primary);
     --primary-foreground: var(--vrcx-theme-primary-foreground);
     --ring: var(--vrcx-theme-ring);
 }
 
-:root.dark[data-theme-color]:not([data-theme-color='default']) {
+:root.dark[data-theme-color]:not([data-theme-color='default']):not(
+        [data-vrcx-0-community-theme-accent='theme']
+    ) {
     --primary: var(--vrcx-theme-primary-dark);
     --primary-foreground: var(--vrcx-theme-primary-foreground-dark);
     --ring: var(--vrcx-theme-ring-dark);
+}
+
+:root[data-vrcx-0-community-theme-accent='override'][data-theme-color='default'] {
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --ring: oklch(0.708 0 0);
+}
+
+:root.dark[data-vrcx-0-community-theme-accent='override'][data-theme-color='default'] {
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --ring: oklch(0.556 0 0);
 }
 
 @theme inline {
@@ -1508,11 +1524,30 @@
 
 .reduce-effects [data-slot='dialog-overlay'],
 .reduce-effects [data-slot='alert-dialog-overlay'],
-.reduce-effects [data-slot='sheet-overlay'] {
+.reduce-effects [data-slot='sheet-overlay'],
+[data-platform='linux'] [data-slot='dialog-overlay'],
+[data-platform='linux'] [data-slot='alert-dialog-overlay'],
+[data-platform='linux'] [data-slot='sheet-overlay'] {
     --tw-backdrop-blur: initial;
     background-color: rgb(0 0 0 / 0.4) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+}
+
+[data-platform='linux'] *,
+[data-platform='linux'] *::before,
+[data-platform='linux'] *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+[data-platform='linux'] [class*='bg-popover/70'] {
+    background-color: var(--popover);
+}
+
+[data-platform='linux'] .vrcx-0-app-root::before,
+[data-platform='linux'] .vrcx-0-background-image-transition-layer {
+    filter: none;
 }
 
 .lucide-person-standing {

@@ -110,6 +110,12 @@ export const entityQueryPolicies = Object.freeze({
         retry: 1,
         refetchOnWindowFocus: false
     }),
+    instanceCreateOptions: Object.freeze({
+        staleTime: 60 * MINUTE_MS,
+        gcTime: 240 * MINUTE_MS,
+        retry: 1,
+        refetchOnWindowFocus: false
+    }),
     representedGroup: Object.freeze({
         staleTime: 60 * SECOND_MS,
         gcTime: 300 * SECOND_MS,
@@ -123,6 +129,12 @@ export const entityQueryPolicies = Object.freeze({
         refetchOnWindowFocus: false
     }),
     worldPersistData: Object.freeze({
+        staleTime: 30 * MINUTE_MS,
+        gcTime: 120 * MINUTE_MS,
+        retry: 1,
+        refetchOnWindowFocus: false
+    }),
+    worldRating: Object.freeze({
         staleTime: 30 * MINUTE_MS,
         gcTime: 120 * MINUTE_MS,
         retry: 1,
@@ -270,6 +282,8 @@ export const queryKeys = Object.freeze({
     ) => withEndpoint(['analysis', fileId, version, variant], endpoint),
     avatarStyles: (endpoint: string = '') =>
         withEndpoint(['avatar', 'styles'], endpoint),
+    instanceCreateOptions: (endpoint: string = '') =>
+        withEndpoint(['instance', 'createOptions'], endpoint),
     representedGroup: (userId: string, endpoint: string = '') =>
         withEndpoint(['user', userId, 'representedGroup'], endpoint),
     userMutualFriends: (userId: string, endpoint: string = '') =>
@@ -288,7 +302,11 @@ export const queryKeys = Object.freeze({
             worldId = ''
         }: { userId?: string; worldId?: string } = {},
         endpoint: string = ''
-    ) => withEndpoint(['world', worldId, 'persistData', userId], endpoint)
+    ) => withEndpoint(['world', worldId, 'persistData', userId], endpoint),
+    worldRating: (
+        { userId, worldId }: { userId: string; worldId: string },
+        endpoint: string = ''
+    ) => withEndpoint(['world', worldId, 'rating', userId], endpoint)
 });
 
 function toQueryOptions(

@@ -1,7 +1,7 @@
 import { formatDateFilter } from '@/lib/dateTime';
 import type { DateFilterFormat } from '@/shared/utils/dateTime';
 import { useShellStore } from '@/state/shellStore';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
+import { IntentTooltip } from '@/ui/hint-tooltip';
 
 export function useDateFormatPreferenceKey() {
     return useShellStore(
@@ -34,13 +34,11 @@ export function TimestampText({
     }
 
     return (
-        <Tooltip>
-            <TooltipTrigger
-                render={<span className={className}>{text}</span>}
-            />
-            <TooltipContent side={tooltipSide}>
-                {formatDateFilter(value, 'long')}
-            </TooltipContent>
-        </Tooltip>
+        <IntentTooltip
+            side={tooltipSide}
+            content={formatDateFilter(value, 'long')}
+        >
+            <span className={className}>{text}</span>
+        </IntentTooltip>
     );
 }

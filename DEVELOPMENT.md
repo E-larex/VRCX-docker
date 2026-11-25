@@ -50,9 +50,15 @@ The Web help menu, settings, login footer, and database-upgrade error dialog omi
 
 [CI](.github/workflows/ci.yml) runs on pushes and pull requests to `master`, and can also be started manually. Frontend formatting, lint, type checking, and tests run on Linux. Changes affecting the Web application, build inputs, deployment, or CI also run Web Rust formatting, Clippy, tests, and the complete browser suite through `.github/actions/check-web-browser`. Rust crate, Cargo, and relevant CI changes additionally check the desktop runtime with default features in a separate job. The Docker job builds the `linux/amd64` image and checks startup, website authentication, origin rejection, and persistence across container recreation with isolated data. Documentation-only changes skip Rust, browser, desktop, and Docker jobs; manual runs execute all checks. CI builds do not publish images; publication follows [RELEASING.md](RELEASING.md).
 
-## Upstream v2.34.0 integration
+## Upstream v2.35.0 integration
 
-The Web host uses upstream `v2.34.0` (`4229d1072eb25077c7712ca41fe6e1b90f513195`). The generated dispatch adds 17 commands, updates 139 signatures and drops the removed moderation-report deletion command. The additions cover assistant session and choice handling, logger device login, saved credentials, friend bios, realtime retry, group galleries, instance discovery, cosmetics and calendar discovery.
+The Web host uses upstream `v2.35.0` (`1b83673ba5d1eac524b62a7a2dd953c31745b99c`). It exposes five new commands: answer an assistant approval request, count recent friend visits across worlds, retrieve instance creation options, and read or set a world rating. The shared assistant runtime handles approval per action. Its two runtime selection commands no longer take `allowWrites`. The world friend visits lookup now runs asynchronously.
+
+Browser zoom stays native, including when the shared settings contain a desktop Ctrl-wheel zoom preference. The Web settings page and settings search omit both desktop zoom controls.
+
+## Previous upstream v2.34.0 integration
+
+The previous baseline was `v2.34.0` (`4229d1072eb25077c7712ca41fe6e1b90f513195`). The generated dispatch adds 17 commands, updates 139 signatures and drops the removed moderation-report deletion command. The additions cover assistant session and choice handling, logger device login, saved credentials, friend bios, realtime retry, group galleries, instance discovery, cosmetics and calendar discovery.
 
 Web commands that use Tauri's managed state receive the same application state as the HTTP request. The privacy lock's device-verification flow uses the shared runtime. Local OSC chatbox, game isolation controls and launching an MCP client installer require a desktop host. Web file grants are confined during runtime assembly, including grants restored at startup.
 

@@ -448,6 +448,16 @@ export const commands = {
             choiceId,
             userId
         }),
+    appAssistantAnswerApproval: (
+        sessionId: string,
+        approvalId: string,
+        approved: boolean
+    ) =>
+        __TAURI_INVOKE<null>('app__assistant_answer_approval', {
+            sessionId,
+            approvalId,
+            approved
+        }),
     appAssistantListSessions: () =>
         __TAURI_INVOKE<SessionSummary[]>('app__assistant_list_sessions'),
     appAssistantGetSession: (sessionId: string) =>
@@ -479,25 +489,22 @@ export const commands = {
         sessionId: string,
         endpointId: string | null,
         model: string | null,
-        allowWrites: boolean,
         playbookMode: PlaybookMode
     ) =>
         __TAURI_INVOKE<Session>('app__assistant_set_session_runtime', {
             sessionId,
             endpointId,
             model,
-            allowWrites,
             playbookMode
         }),
     appAssistantSetDefaultRuntime: (
         endpointId: string | null,
         model: string | null,
-        allowWrites: boolean,
         playbookMode: PlaybookMode
     ) =>
         __TAURI_INVOKE<AssistantRuntimeSelection>(
             'app__assistant_set_default_runtime',
-            { endpointId, model, allowWrites, playbookMode }
+            { endpointId, model, playbookMode }
         ),
     appLlmEndpointFollowCustomProxy: () =>
         __TAURI_INVOKE<boolean>('app__llm_endpoint_follow_custom_proxy'),
@@ -921,6 +928,11 @@ export const commands = {
         __TAURI_INVOKE<WorldFriendVisitsOutput>('app__world_friend_visits', {
             worldId
         }),
+    appWorldRecentFriendCounts: (worldIds: string[]) =>
+        __TAURI_INVOKE<WorldRecentFriendCountRow[]>(
+            'app__world_recent_friend_counts',
+            { worldIds }
+        ),
     appFavoriteList: (kind: FavoriteEntityKind) =>
         __TAURI_INVOKE<FavoriteRow[]>('app__favorite_list', { kind }),
     appFavoriteLocalCustomOrder: (kind: FavoriteEntityKind) =>
@@ -1522,6 +1534,10 @@ export const commands = {
         __TAURI_INVOKE<HttpApiExecuteResponse>('app__vrchat_instance_create', {
             input
         }),
+    appVrchatInstanceCreateOptionsGet: () =>
+        __TAURI_INVOKE<InstanceCreateOptions>(
+            'app__vrchat_instance_create_options_get'
+        ),
     appVrchatInstanceGet: (input: VrchatInstanceIdentityInput) =>
         __TAURI_INVOKE<HttpApiExecuteResponse>('app__vrchat_instance_get', {
             input
@@ -1981,6 +1997,14 @@ export const commands = {
         ),
     appVrchatWorldPublish: (input: VrchatWorldIdInput) =>
         __TAURI_INVOKE<HttpApiExecuteResponse>('app__vrchat_world_publish', {
+            input
+        }),
+    appVrchatWorldRatingGet: (input: VrchatWorldIdInput) =>
+        __TAURI_INVOKE<HttpApiExecuteResponse>('app__vrchat_world_rating_get', {
+            input
+        }),
+    appVrchatWorldRatingSet: (input: VrchatWorldRatingSetInput) =>
+        __TAURI_INVOKE<HttpApiExecuteResponse>('app__vrchat_world_rating_set', {
             input
         }),
     appVrchatWorldSave: (input: VrchatWorldSaveInput) =>
@@ -2960,6 +2984,30 @@ export type AppUpdateStatusSnapshot = {
     shouldNotify: boolean;
 };
 
+/**
+ *  A side-effecting tool call waiting for the user. `fields` are the exact
+ *  arguments the call runs with once approved.
+ */
+export type AssistantApproval = {
+    id: string;
+    toolCallId: string;
+    tool: string;
+    fields: AssistantApprovalField[];
+    favoriteMove: AssistantFavoriteMovePreview | null;
+};
+
+export type AssistantApprovalField = {
+    name: string;
+    value: string;
+};
+
+export type AssistantApprovalRequestEvent = {
+    ownerUserId: OwnerId;
+    sessionId: string;
+    turnId: string;
+    approval: AssistantApproval;
+};
+
 export type AssistantChart = {
     kind: AssistantChartKind;
     axis: AssistantChartAxis;
@@ -3022,10 +3070,36 @@ export type AssistantErrorEvent = {
     message: string;
 };
 
+export type AssistantFavoriteGroup = {
+    name: string;
+    displayName: string;
+};
+
+export type AssistantFavoriteMoveItem = {
+    entityId: string;
+    name: string | null;
+    source: AssistantFavoriteGroup | null;
+    status: AssistantFavoriteMoveStatus;
+};
+
+/**
+ *  What a `favorite_move` call would do, from its dry run, so the user approves
+ *  the whole batch knowing each favorite's name and current group.
+ */
+export type AssistantFavoriteMovePreview = {
+    kind: FavoriteEntityKind;
+    target: AssistantFavoriteGroup;
+    items: AssistantFavoriteMoveItem[];
+};
+
+export type AssistantFavoriteMoveStatus =
+    | 'wouldMove'
+    | 'alreadyInTarget'
+    | 'notFavorited';
+
 export type AssistantRuntimeSelection = {
     endpointId: string | null;
     model: string | null;
-    allowWrites: boolean;
     playbookMode: PlaybookMode;
 };
 
@@ -3059,6 +3133,7 @@ export type AssistantToolResultEvent = {
     entities: Entity[];
     charts: AssistantChart[];
     screenshots: AssistantScreenshots | null;
+    denied: boolean;
 };
 
 export type AssistantTurnEntitiesEvent = {
@@ -5671,6 +5746,16 @@ export type InstanceCreateGroupAccessType = 'members' | 'plus' | 'public';
 
 export type InstanceCreateMinimumAvatarPerformance = 'Poor' | 'Medium' | 'Good';
 
+export type InstanceCreateOption = {
+    id: string;
+    name: string;
+};
+
+export type InstanceCreateOptions = {
+    categories: InstanceCreateOption[];
+    vibes: InstanceCreateOption[];
+};
+
 export type InstanceCreateRegion = 'eu' | 'jp' | 'us' | 'use';
 
 export type InstanceCreateRequest = {
@@ -5684,6 +5769,10 @@ export type InstanceCreateRequest = {
     roleIds?: string[] | null;
     ageGate?: boolean | null;
     displayName?: string | null;
+    description?: string | null;
+    categoryId?: string | null;
+    vibeIds?: string[] | null;
+    languages?: string[] | null;
     minimumAvatarPerformance?: InstanceCreateMinimumAvatarPerformance | null;
 };
 
@@ -6395,7 +6484,7 @@ export type NotificationMarkSeenBatchInput = {
 export type NotificationMarkSeenBatchItem = {
     id: string;
     version: number;
-    location: NotificationMarkSeenLocation;
+    type: string;
 };
 
 export type NotificationMarkSeenBatchResult = {
@@ -6406,19 +6495,17 @@ export type NotificationMarkSeenBatchResult = {
     lastError: string | null;
 };
 
-export type NotificationMarkSeenEffect = 'seen';
+export type NotificationMarkSeenEffect = 'seen' | 'expired';
 
 export type NotificationMarkSeenItemResult = {
     id: string;
     state: NotificationMarkSeenItemState;
-    effect: NotificationMarkSeenEffect | null;
+    effect: NotificationMarkSeenEffect;
     attempts: number;
     message: string;
 };
 
-export type NotificationMarkSeenItemState = 'succeeded' | 'failed';
-
-export type NotificationMarkSeenLocation = 'remote' | 'local';
+export type NotificationMarkSeenItemState = 'succeeded' | 'remoteFailed';
 
 export type NotificationRequestInviteAcceptInput = {
     ownerUserId: OwnerId;
@@ -7366,9 +7453,9 @@ export type Session = {
     title: string;
     messages: Message[];
     activeTurn: ActiveTurn | null;
+    pendingApproval: AssistantApproval | null;
     endpointId: string | null;
     model: string | null;
-    allowWrites: boolean;
     playbookMode: PlaybookMode;
     entityPanelOpen: boolean;
     surfacedEntities: Entity[];
@@ -7588,6 +7675,8 @@ export type ToolResultRecord = {
     summary: string;
     entities: Entity[];
     charts?: AssistantChart[];
+    /**  The user declined the approval card, so the call never ran. */
+    denied?: boolean;
     screenshots?: AssistantScreenshots | null;
 };
 
@@ -8382,6 +8471,11 @@ export type VrchatWorldPersistentDataDeleteInput = {
     worldId?: string;
 };
 
+export type VrchatWorldRatingSetInput = {
+    worldId?: string;
+    value: WorldRatingValue | null;
+};
+
 export type VrchatWorldSaveInput = {
     worldId?: string;
     params: WorldUpdateRequest;
@@ -8439,6 +8533,13 @@ export type WorldMemoOutput = {
     worldId: string;
     editedAt: string;
     memo: string;
+};
+
+export type WorldRatingValue = 'like' | 'dislike';
+
+export type WorldRecentFriendCountRow = {
+    worldId: string;
+    friendCount: number;
 };
 
 export type WorldSearchParams = {

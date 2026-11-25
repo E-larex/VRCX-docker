@@ -11,6 +11,10 @@ use vrcx_0_mcp::{
     apply_user_choice, InProcessMcpTools, McpError, ToolCallOutcome, UserChoiceRequest,
 };
 
+use crate::approvals::{
+    approval_fields, favorite_move_preview, AssistantApproval, AssistantFavoriteMovePreview,
+    AssistantFavoriteMoveStatus, PendingApprovals, ToolApprovalPolicy,
+};
 use crate::charts::{tool_charts, AssistantChart};
 use crate::choices::{choice_candidates, PendingChoices};
 use crate::entities::{extract_entities, surfaced_entities, Entity};
@@ -128,6 +132,10 @@ usr_ id.
 - A user message may mention someone as [@Name](vrcx-0://user/open?id=usr_…) or a world \
 as [@Name](vrcx-0://world/open?id=wrld_…). That id is exactly the person or world meant: \
 pass it as the user or world argument directly instead of searching by name.
+- Tools that change something (favorites, friend notes, the Chatbox) show the user an \
+approval card in the app before they run. When the user asks for such a change, call the \
+tool directly instead of asking for confirmation in text first. If the user declines, say \
+it was not done and do not retry unless they ask again.
 
 Style:
 - Answer directly; do not narrate plans or tool calls.
@@ -142,6 +150,8 @@ pub(crate) struct TurnContext {
     pub tools: Arc<InProcessMcpTools>,
     pub sessions: Arc<SessionStore>,
     pub choices: PendingChoices,
+    pub approvals: PendingApprovals,
+    pub approval_policy: Arc<ToolApprovalPolicy>,
     pub emitter: AssistantEmitter,
     pub client: AssistantLlmClient,
     pub tool_defs: Arc<Vec<ToolDefinition>>,
@@ -239,8 +249,8 @@ pub(crate) async fn run_turn(ctx: TurnContext) {
         used_tools = true;
 
         // Announce and record every call in the model's order first, then run
-        // the dispatchable ones concurrently; results are applied in source
-        // order so the transcript and the persisted rows stay protocol-shaped.
+        // the dispatchable ones; results are applied in source order so the
+        // transcript and the persisted rows stay protocol-shaped.
         let prepared: Vec<PreparedCall<'_>> = turn
             .tool_calls
             .iter()
@@ -258,7 +268,7 @@ pub(crate) async fn run_turn(ctx: TurnContext) {
                 )
             })
             .collect();
-        let outcomes = join_all(prepared.into_iter().map(|call| dispatch_call(&ctx, call))).await;
+        let outcomes = dispatch_round(&ctx, prepared).await;
 
         for (call, resolved) in outcomes {
             let Some(resolved) = resolved else {
@@ -283,15 +293,9 @@ pub(crate) async fn run_turn(ctx: TurnContext) {
                 }
             }
             collected.extend(resolved.entities.iter().cloned());
-            ctx.emitter.tool_result(
-                &call.id,
-                resolved.ok,
-                &resolved.summary,
-                &resolved.entities,
-                &resolved.charts,
-                resolved.screenshots.as_ref(),
-            );
-            record_tool_result(&ctx, call, &resolved);
+            let record = tool_result_record(call, &resolved);
+            ctx.emitter.tool_result(&record);
+            record_tool_result(&ctx, record, resolved.content.clone());
             working.push(ChatMessage::tool(call.id.clone(), resolved.content));
         }
     }
@@ -487,6 +491,159 @@ fn prepare_call<'a>(
     }
 }
 
+type DispatchOutcome<'a> = (&'a ToolCall, Option<ResolvedTool>);
+
+/// Read-only calls run concurrently. Calls that change something wait for the
+/// user one at a time in the model's order, so approvals answered out of order
+/// cannot reorder their effects.
+async fn dispatch_round<'a>(
+    ctx: &TurnContext,
+    prepared: Vec<PreparedCall<'a>>,
+) -> Vec<DispatchOutcome<'a>> {
+    let (gated, free): (Vec<_>, Vec<_>) =
+        prepared.into_iter().enumerate().partition(|(_, call)| {
+            call.resolved.is_none()
+                && ctx
+                    .approval_policy
+                    .requires_approval(&call.call.function.name)
+        });
+    let free_calls = join_all(
+        free.into_iter()
+            .map(|(index, call)| async move { (index, dispatch_call(ctx, call).await) }),
+    );
+    let gated_calls = async {
+        let mut outcomes = Vec::with_capacity(gated.len());
+        for (index, call) in gated {
+            let outcome = dispatch_gated_call(ctx, call).await;
+            let cancelled = outcome.1.is_none();
+            outcomes.push((index, outcome));
+            if cancelled {
+                break;
+            }
+        }
+        outcomes
+    };
+    let (mut outcomes, gated_outcomes) = tokio::join!(free_calls, gated_calls);
+    outcomes.extend(gated_outcomes);
+    outcomes.sort_by_key(|(index, _)| *index);
+    outcomes.into_iter().map(|(_, outcome)| outcome).collect()
+}
+
+async fn dispatch_gated_call<'a>(ctx: &TurnContext, call: PreparedCall<'a>) -> DispatchOutcome<'a> {
+    let tool_call = call.call;
+    let name = tool_call.function.name.clone();
+    let arguments = ctx
+        .approval_policy
+        .approved_arguments(&name, call.arguments);
+    let mut favorite_move = None;
+    if let Some(preview_arguments) = ctx.approval_policy.preview_arguments(&name, &arguments) {
+        let preview = match await_tool_call(
+            ctx.tools.call_tool(name.clone(), Some(preview_arguments)),
+            &ctx.cancel,
+            TOOL_CALL_TIMEOUT,
+        )
+        .await
+        {
+            AwaitToolCall::Completed(preview) => preview,
+            AwaitToolCall::Cancelled => return (tool_call, None),
+            AwaitToolCall::TimedOut => Err(McpError::Custom(format!(
+                "tool `{name}` timed out after {} seconds",
+                TOOL_CALL_TIMEOUT.as_secs()
+            ))),
+        };
+        match preview {
+            Ok(preview) if !preview.is_error => {
+                favorite_move = favorite_move_preview(&name, preview.structured.as_ref());
+                if favorite_move.as_ref().is_some_and(|preview| {
+                    preview
+                        .items
+                        .iter()
+                        .all(|item| item.status != AssistantFavoriteMoveStatus::WouldMove)
+                }) {
+                    return (tool_call, Some(resolve_tool_outcome(&name, Ok(preview))));
+                }
+            }
+            failed => return (tool_call, Some(resolve_tool_outcome(&name, failed))),
+        }
+    }
+    match ask_user_approval(ctx, tool_call, &arguments, favorite_move).await {
+        Approval::Approved if turn_still_current(ctx) => {
+            dispatch_call(
+                ctx,
+                PreparedCall {
+                    call: tool_call,
+                    arguments: Some(arguments),
+                    resolved: None,
+                },
+            )
+            .await
+        }
+        Approval::Denied => (
+            tool_call,
+            Some(denied_tool_result(&tool_call.function.name)),
+        ),
+        Approval::Approved | Approval::Cancelled => (tool_call, None),
+    }
+}
+
+fn turn_still_current(ctx: &TurnContext) -> bool {
+    !ctx.cancel.is_cancelled() && ctx.sessions.is_current_turn(&ctx.session_id, &ctx.turn_id)
+}
+
+enum Approval {
+    Approved,
+    Denied,
+    Cancelled,
+}
+
+// A cancel that lands together with a late approval must win, so a dropped
+// turn never runs the change it was waiting on.
+async fn wait_for_approval(
+    receiver: tokio::sync::oneshot::Receiver<bool>,
+    cancel: &CancellationToken,
+) -> Approval {
+    tokio::select! {
+        biased;
+        _ = cancel.cancelled() => Approval::Cancelled,
+        answer = receiver => match answer {
+            Ok(true) => Approval::Approved,
+            Ok(false) => Approval::Denied,
+            Err(_) => Approval::Cancelled,
+        },
+    }
+}
+
+async fn ask_user_approval(
+    ctx: &TurnContext,
+    call: &ToolCall,
+    arguments: &serde_json::Map<String, Value>,
+    favorite_move: Option<AssistantFavoriteMovePreview>,
+) -> Approval {
+    if !ctx.sessions.is_current_turn(&ctx.session_id, &ctx.turn_id) {
+        return Approval::Cancelled;
+    }
+    let approval = AssistantApproval {
+        id: format!("approval_{}", random_hex()),
+        tool_call_id: call.id.clone(),
+        tool: call.function.name.clone(),
+        fields: approval_fields(arguments),
+        favorite_move,
+    };
+    let receiver = ctx
+        .approvals
+        .register(approval.id.clone(), ctx.session_id.clone());
+    ctx.sessions
+        .set_pending_approval(&ctx.session_id, approval.clone());
+    ctx.emitter.approval_request(&approval);
+    let answer = wait_for_approval(receiver, &ctx.cancel).await;
+    if matches!(answer, Approval::Cancelled) {
+        ctx.approvals.remove(&approval.id);
+    }
+    ctx.sessions
+        .clear_pending_approval(&ctx.session_id, &approval.id);
+    answer
+}
+
 // `None` means the turn was cancelled while the tool ran.
 async fn dispatch_call<'a>(
     ctx: &TurnContext,
@@ -585,23 +742,27 @@ fn record_tool_call(ctx: &TurnContext, call: &ToolCall) {
     }
 }
 
-fn record_tool_result(ctx: &TurnContext, call: &ToolCall, resolved: &ResolvedTool) {
+fn tool_result_record(call: &ToolCall, resolved: &ResolvedTool) -> ToolResultRecord {
+    ToolResultRecord {
+        tool_call_id: call.id.clone(),
+        name: call.function.name.clone(),
+        ok: resolved.ok,
+        summary: resolved.summary.clone(),
+        entities: resolved.entities.clone(),
+        charts: resolved.charts.clone(),
+        denied: resolved.denied,
+        screenshots: resolved.screenshots.clone(),
+    }
+}
+
+fn record_tool_result(ctx: &TurnContext, record: ToolResultRecord, content: String) {
     if !ctx.sessions.is_current_turn(&ctx.session_id, &ctx.turn_id) {
         return;
     }
-    if let Err(error) = ctx.sessions.push_tool_result(
-        &ctx.session_id,
-        ToolResultRecord {
-            tool_call_id: call.id.clone(),
-            name: call.function.name.clone(),
-            ok: resolved.ok,
-            summary: resolved.summary.clone(),
-            entities: resolved.entities.clone(),
-            charts: resolved.charts.clone(),
-            screenshots: resolved.screenshots.clone(),
-        },
-        resolved.content.clone(),
-    ) {
+    if let Err(error) = ctx
+        .sessions
+        .push_tool_result(&ctx.session_id, record, content)
+    {
         tracing::warn!(%error, "assistant: failed to record tool result");
     }
 }
@@ -710,6 +871,7 @@ struct ResolvedTool {
     entities: Vec<Entity>,
     charts: Vec<AssistantChart>,
     screenshots: Option<AssistantScreenshots>,
+    denied: bool,
 }
 
 fn resolve_tool_outcome(
@@ -775,6 +937,7 @@ fn resolve_tool_outcome(
                 entities,
                 charts,
                 screenshots,
+                denied: false,
             }
         }
         Err(error) => {
@@ -789,6 +952,7 @@ fn resolve_tool_outcome(
                 entities: Vec::new(),
                 charts: Vec::new(),
                 screenshots: None,
+                denied: false,
             }
         }
     }
@@ -835,6 +999,24 @@ fn duplicate_tool_call_result(tool_name: &str) -> ResolvedTool {
         entities: Vec::new(),
         charts: Vec::new(),
         screenshots: None,
+        denied: false,
+    }
+}
+
+fn denied_tool_result(tool_name: &str) -> ResolvedTool {
+    let summary = "Declined by the user; nothing was changed.".to_string();
+    ResolvedTool {
+        ok: false,
+        content: format!(
+            "The user declined this `{tool_name}` call in VRCX-0, so it did not run and nothing was changed. Tell the user it was not done. Do not call it again unless the user asks for it again."
+        ),
+        summary: summary.clone(),
+        fallback_summary: Some(summary),
+        supported_summary: None,
+        entities: Vec::new(),
+        charts: Vec::new(),
+        screenshots: None,
+        denied: true,
     }
 }
 

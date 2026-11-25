@@ -38,7 +38,7 @@ pub(crate) fn translation_system_prompt(custom: Option<&str>, target_lang: &str)
         .replace("{targetLang}", target_lang)
 }
 
-type LegacyAssistantSeed = (String, Option<String>, bool, PlaybookMode);
+type LegacyAssistantSeed = (String, Option<String>, PlaybookMode);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -100,7 +100,6 @@ pub struct LlmEndpointDetectModelsInput {
 pub struct AssistantRuntimeSelection {
     pub endpoint_id: Option<String>,
     pub model: Option<String>,
-    pub allow_writes: bool,
     pub playbook_mode: PlaybookMode,
 }
 
@@ -127,7 +126,6 @@ impl Default for AssistantRuntimeSelection {
         Self {
             endpoint_id: None,
             model: None,
-            allow_writes: false,
             playbook_mode: PlaybookMode::Auto,
         }
     }
@@ -236,11 +234,6 @@ impl EndpointStore {
         self.ensure_migrated()?;
         let _guard = self.write_lock.lock().unwrap();
         let mut endpoints = self.load_endpoints()?;
-        let fallback_endpoint_id = endpoints
-            .iter()
-            .find(|endpoint| endpoint.id != id)
-            .map(|endpoint| endpoint.id.clone())
-            .unwrap_or_default();
         endpoints.retain(|endpoint| endpoint.id != id);
         self.save_endpoints(&endpoints)?;
 
@@ -249,15 +242,6 @@ impl EndpointStore {
             selection.endpoint_id = None;
             selection.model = None;
             self.set_last_selection(&selection)?;
-        }
-        if self
-            .config
-            .get_string(TRANSLATION_ENDPOINT_ID_CONFIG_KEY, "")?
-            .trim()
-            == id
-        {
-            self.config
-                .set_string(TRANSLATION_ENDPOINT_ID_CONFIG_KEY, &fallback_endpoint_id)?;
         }
         Ok(())
     }

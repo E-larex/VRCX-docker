@@ -51,9 +51,9 @@ function session(id: string): Session {
             }
         ],
         activeTurn: null,
+        pendingApproval: null,
         endpointId: null,
         model: null,
-        allowWrites: false,
         playbookMode: 'auto',
         entityPanelOpen: false,
         surfacedEntities: [],

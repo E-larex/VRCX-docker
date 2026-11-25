@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const tauriApp = vi.hoisted(() => ({
     appVrchatInstanceClose: vi.fn(),
     appVrchatInstanceCreate: vi.fn(),
+    appVrchatInstanceCreateOptionsGet: vi.fn(),
     appVrchatInstanceGet: vi.fn()
 }));
 
@@ -26,6 +27,24 @@ describe('InstanceRepository', () => {
                 data: '{"ok":true}'
             });
         }
+    });
+
+    it('reuses the instance category and vibe options across dialogs', async () => {
+        const options = {
+            categories: [{ id: 'icat_hangout', name: 'Hangout' }],
+            vibes: [{ id: 'ivib_chill', name: 'Chill' }]
+        };
+        tauriApp.appVrchatInstanceCreateOptionsGet.mockResolvedValue(options);
+
+        await expect(
+            vrchatInstanceRepository.getInstanceCreateOptions()
+        ).resolves.toEqual(options);
+        await expect(
+            vrchatInstanceRepository.getInstanceCreateOptions()
+        ).resolves.toEqual(options);
+        expect(
+            tauriApp.appVrchatInstanceCreateOptionsGet
+        ).toHaveBeenCalledOnce();
     });
 
     it('coalesces concurrent instance reads without reusing completed results', async () => {
@@ -157,6 +176,40 @@ describe('InstanceRepository', () => {
             queueEnabled: false,
             ageGate: true,
             displayName: 'Raid Night'
+        });
+    });
+
+    it('sends discovery details only when they are filled in', async () => {
+        await vrchatInstanceRepository.createInstance({
+            worldId: 'wrld_public',
+            description: 'Bring snacks',
+            categoryId: 'icat_watch',
+            vibeIds: ['ivib_chill', 'ivib_cozy'],
+            languages: ['jpn', 'eng']
+        });
+        await vrchatInstanceRepository.createInstance({
+            worldId: 'wrld_public',
+            description: '',
+            categoryId: '',
+            vibeIds: [],
+            languages: []
+        });
+
+        expect(
+            tauriApp.appVrchatInstanceCreate.mock.calls[0][0].params
+        ).toMatchObject({
+            description: 'Bring snacks',
+            categoryId: 'icat_watch',
+            vibeIds: ['ivib_chill', 'ivib_cozy'],
+            languages: ['jpn', 'eng']
+        });
+        expect(
+            tauriApp.appVrchatInstanceCreate.mock.calls[1][0].params
+        ).toEqual({
+            type: 'public',
+            canRequestInvite: false,
+            worldId: 'wrld_public',
+            region: 'us'
         });
     });
 

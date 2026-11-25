@@ -29,6 +29,10 @@ import {
 import { normalizeUserId } from './user-dialog/userProfileFields';
 import { useUserDialogActions } from './user-dialog/useUserDialogActions';
 import {
+    useUserDialogLocationFriendsById,
+    useUserDialogTargetFriendsById
+} from './user-dialog/useUserDialogFriendsById';
+import {
     createEmptyUserDialogLocationPanel,
     useUserDialogLocationPanel
 } from './user-dialog/useUserDialogLocationPanel';
@@ -49,6 +53,7 @@ import type {
 import { UserDialogTabbedView } from './UserDialogTabbedView';
 
 const userDialogSkeletonDelayMs = 160;
+const EMPTY_LOCATION_PANEL = createEmptyUserDialogLocationPanel();
 
 export function UserDialogContent({
     userId,
@@ -70,7 +75,6 @@ export function UserDialogContent({
         currentEndpoint,
         currentUserId,
         currentUserSnapshot,
-        friendsById,
         gameState,
         groupInstancesState,
         hideUserMemos,
@@ -79,40 +83,40 @@ export function UserDialogContent({
         knownTargetUser,
         localFriendFavorites,
         remoteFavoriteFriendIds,
+        targetFriend,
         updateEntityDialogMetadata
     } = useUserDialogRuntimeState(normalizedUserId);
     const normalizedCurrentUserId = normalizeUserId(currentUserId);
     const isTargetCurrentUser = Boolean(
         normalizedUserId && normalizedUserId === normalizedCurrentUserId
     );
-    const friendSnapshot = friendsById[normalizedUserId] || null;
-    const isKnownFriend = Boolean(friendSnapshot);
+    const isKnownFriend = Boolean(targetFriend);
     const localSnapshot = useMemo(
         () =>
             isTargetCurrentUser
                 ? currentUserSnapshot
                 : mergeUserDialogLocalSnapshot({
-                      friendSnapshot,
+                      friendSnapshot: targetFriend,
                       seedData,
                       knownTargetUser
                   }),
         [
             currentUserSnapshot,
-            friendSnapshot,
             isTargetCurrentUser,
             knownTargetUser,
-            seedData
+            seedData,
+            targetFriend
         ]
     );
     const activitySnapshot = isTargetCurrentUser
         ? currentUserSnapshot
-        : friendSnapshot;
+        : targetFriend;
     const targetKey = dialogTargetKey(currentEndpoint, normalizedUserId);
     const actionStatusRef = useRef('idle');
     const [actionStatus, setActionStatus] = useState('idle');
     const [groupInviteOpen, setGroupInviteOpen] = useState(false);
     const [reportOpen, setReportOpen] = useState(false);
-    const [accountStandingOpen, setAccountStandingOpen] = useState(false);
+    const [vrchatAccountOpen, setVrchatAccountOpen] = useState(false);
     const [groupQuickModerationOpen, setGroupQuickModerationOpen] =
         useState(false);
     const [recentActionVersion, setRecentActionVersion] = useState(0);
@@ -137,6 +141,11 @@ export function UserDialogContent({
         updateEntityDialogMetadata
     });
     const targetIdentity = `${currentEndpoint || ''}:${normalizedUserId || ''}:${openNonce}`;
+    const targetFriendsById = useUserDialogTargetFriendsById({
+        normalizedUserId,
+        snapshotKey: `${targetIdentity}:${reloadToken}`,
+        targetFriend
+    });
     const profileIsLoading = loadStatus === 'running' && !profile;
     const showProfileSkeleton = useDelayedFlag(
         profileIsLoading,
@@ -147,7 +156,7 @@ export function UserDialogContent({
         setGroupInviteOpen(false);
         setGroupQuickModerationOpen(false);
         setReportOpen(false);
-        setAccountStandingOpen(false);
+        setVrchatAccountOpen(false);
     }, [targetIdentity]);
 
     const currentGameLocation = normalizeUserId(gameState?.currentLocation);
@@ -164,8 +173,12 @@ export function UserDialogContent({
         currentLocation: currentGameLocation || currentSnapshotLocation,
         currentLocationPlayerIds: gameState?.currentLocationPlayerIds,
         currentLocationPlayers: gameState?.currentLocationPlayers,
-        friendsById
+        friendsById: targetFriendsById
     });
+    const friendsById = useUserDialogLocationFriendsById(
+        targetFriendsById,
+        presenceLocation
+    );
 
     useEffect(
         () =>
@@ -268,8 +281,15 @@ export function UserDialogContent({
             });
         }
     }, [currentEndpoint, isCurrentUser, isFriend, profile]);
-    const friendRequestState = resolveFriendRequestState(profile);
-    const platform = resolvePlatformMeta(profile?.$platform);
+    const friendRequestState = useMemo(
+        () => resolveFriendRequestState(profile),
+        [profile]
+    );
+    const profilePlatform = profile?.$platform;
+    const platform = useMemo(
+        () => resolvePlatformMeta(profilePlatform),
+        [profilePlatform]
+    );
     const PlatformIcon = platform.icon;
     const imageUrl = userImage(profile, 512);
     const { memo, editMemo, memoDialog } = useUserDialogMemoState({
@@ -361,7 +381,7 @@ export function UserDialogContent({
         (!presenceLocation ||
             isSameLocationTag(locationPanel.location, presenceLocation))
             ? locationPanel
-            : createEmptyUserDialogLocationPanel();
+            : EMPTY_LOCATION_PANEL;
     return (
         <>
             <UserDialogTabbedView
@@ -383,7 +403,8 @@ export function UserDialogContent({
                     isCurrentUser,
                     isFriend,
                     isFavorite,
-                    friendRequestState
+                    friendRequestState,
+                    friendsById
                 }}
                 platformInfo={{
                     platform,
@@ -426,8 +447,8 @@ export function UserDialogContent({
                 profileControls={{
                     onRefresh: refreshProfile,
                     onEditMemo: editMemo,
-                    onShowAccountStanding: () => {
-                        setAccountStandingOpen(true);
+                    onShowVrchatAccount: () => {
+                        setVrchatAccountOpen(true);
                     }
                 }}
                 friendControls={{
@@ -480,9 +501,13 @@ export function UserDialogContent({
                 selfProfileDetails={profileDetails}
             />
             <UserDialogContentDialogs
-                accountStandingDialog={{
-                    open: accountStandingOpen,
-                    onOpenChange: setAccountStandingOpen
+                vrchatAccountDialog={{
+                    open: vrchatAccountOpen,
+                    onOpenChange: setVrchatAccountOpen,
+                    currentUserId: normalizedCurrentUserId,
+                    contentFilters: currentUserSnapshot?.contentFilters,
+                    hideContentFilterSettings:
+                        currentUserSnapshot?.hideContentFilterSettings === true
                 }}
                 actionStatus={actionStatus}
                 noteMemoDialog={memoDialog}

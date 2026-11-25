@@ -20,6 +20,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useLanguageNames } from '@/components/language/useLanguageNames';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import type { UserBadgeRecord } from '@/domain/entities/user';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
@@ -56,7 +57,6 @@ import {
     normalizePreviousDisplayNames
 } from '../userDialogRows';
 import { PreviousDisplayNamesBadge } from '../UserDialogViewParts';
-import { languageDisplayName } from '../userProfileFields';
 import { deriveUserRelationshipBadges } from '../userRelationshipBadges';
 import type {
     AvatarOverrideState,
@@ -252,7 +252,7 @@ export interface UserHeaderCommands {
     onOpenUserUrl: () => void;
     onRefresh: () => void;
     onReportUser: () => void;
-    onShowAccountStanding: () => void;
+    onShowVrchatAccount: () => void;
     onShowAvatarAuthor: () => void;
     onShowInstanceHistory: () => void;
     onToggleBadgeShowcased: (
@@ -510,6 +510,7 @@ export function UserDialogHeaderSection({
     headerCommands: UserHeaderCommands;
 }) {
     const { t } = useTranslation();
+    const { languageName, languageDetail } = useLanguageNames();
     const resolvedThemeMode = useResolvedThemeMode();
     const {
         actionStatus = 'idle',
@@ -575,7 +576,7 @@ export function UserDialogHeaderSection({
         onOpenUserUrl,
         onRefresh,
         onReportUser,
-        onShowAccountStanding,
+        onShowVrchatAccount,
         onShowAvatarAuthor,
         onShowInstanceHistory,
         onToggleBadgeShowcased,
@@ -621,7 +622,7 @@ export function UserDialogHeaderSection({
         onOpenFallbackAvatar,
         onRefresh,
         onReportUser,
-        onShowAccountStanding,
+        onShowVrchatAccount,
         onShowAvatarAuthor,
         onShowInstanceHistory,
         onUnfriend
@@ -923,7 +924,6 @@ export function UserDialogHeaderSection({
                     {hasTitleMeta ? (
                         <HeaderMetaRow icon={<GlobeIcon />}>
                             {profileLanguages.map((language, index) => {
-                                const code = language.key.toUpperCase();
                                 return (
                                     <span
                                         key={language.key}
@@ -933,14 +933,17 @@ export function UserDialogHeaderSection({
                                             <TooltipTrigger
                                                 render={
                                                     <span className="cursor-default">
-                                                        {languageDisplayName(
-                                                            language
+                                                        {languageName(
+                                                            language.key
                                                         )}
                                                     </span>
                                                 }
                                             />
                                             <TooltipContent>
-                                                {code}
+                                                {languageDetail(
+                                                    language.key,
+                                                    language.value
+                                                )}
                                             </TooltipContent>
                                         </Tooltip>
                                         {index < profileLanguages.length - 1 ? (

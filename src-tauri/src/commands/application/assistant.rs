@@ -51,6 +51,21 @@ pub async fn app__assistant_answer_choice(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn app__assistant_answer_approval(
+    state: State<'_, AppState>,
+    sessionId: String,
+    approvalId: String,
+    approved: bool,
+) -> Result<(), AppError> {
+    state
+        .assistant()
+        .await?
+        .answer_approval(&sessionId, &approvalId, approved);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn app__assistant_list_sessions(
     state: State<'_, AppState>,
 ) -> Result<Vec<SessionSummary>, AppError> {
@@ -147,7 +162,6 @@ pub async fn app__assistant_set_session_runtime(
     sessionId: String,
     endpointId: Option<String>,
     model: Option<String>,
-    allowWrites: bool,
     playbookMode: PlaybookMode,
 ) -> Result<Session, AppError> {
     state
@@ -161,7 +175,6 @@ pub async fn app__assistant_set_session_runtime(
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
                 .map(str::to_string),
-            allowWrites,
             playbookMode,
         )
         .map_err(AppError::from)
@@ -173,7 +186,6 @@ pub async fn app__assistant_set_default_runtime(
     state: State<'_, AppState>,
     endpointId: Option<String>,
     model: Option<String>,
-    allowWrites: bool,
     playbookMode: PlaybookMode,
 ) -> Result<AssistantRuntimeSelection, AppError> {
     state
@@ -186,7 +198,6 @@ pub async fn app__assistant_set_default_runtime(
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
                 .map(str::to_string),
-            allowWrites,
             playbookMode,
         )
         .map_err(AppError::from)

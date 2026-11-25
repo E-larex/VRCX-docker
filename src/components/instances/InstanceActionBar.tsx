@@ -13,9 +13,9 @@ import { useTranslation } from 'react-i18next';
 
 import type { LocationObjectRecord } from '@/components/location/locationModel';
 import { cn } from '@/lib/utils';
+import { IntentTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { InstanceActionSummary } from './InstanceActionSummary';
 import { InstanceCalendarLinkDialog } from './InstanceCalendarLinkDialog';
@@ -30,7 +30,6 @@ function ActionButton({
     disableTooltip = false,
     loading = false,
     icon: Icon,
-    variant = 'outline',
     onClick
 }: {
     label: string;
@@ -38,14 +37,13 @@ function ActionButton({
     disableTooltip?: boolean;
     loading?: boolean;
     icon: LucideIcon;
-    variant?: 'ghost' | 'outline';
     onClick?: () => void;
 }) {
     const button = (
         <Button
             type="button"
             size="icon-xs"
-            variant={variant}
+            variant="ghost"
             aria-label={label}
             disabled={disabled || loading}
             onClick={onClick}
@@ -63,16 +61,14 @@ function ActionButton({
     }
 
     return (
-        <Tooltip>
-            <TooltipTrigger render={<span>{button}</span>} />
-            <TooltipContent>{label}</TooltipContent>
-        </Tooltip>
+        <IntentTooltip content={label}>
+            <span>{button}</span>
+        </IntentTooltip>
     );
 }
 
 export function InstanceActionBar({
     className,
-    actionVariant = 'outline',
     target = null,
     instance = null,
     friendCount,
@@ -94,7 +90,6 @@ export function InstanceActionBar({
     onHistory
 }: {
     className?: string;
-    actionVariant?: 'ghost' | 'outline';
     target?: LocationObjectRecord | null;
     instance?: unknown;
     friendCount?: number;
@@ -202,7 +197,6 @@ export function InstanceActionBar({
                     label={t('dialog.instance.action.launch_instance')}
                     icon={LogInIcon}
                     disableTooltip={disableTooltip}
-                    variant={actionVariant}
                     loading={busy === 'launch'}
                     disabled={Boolean(busy)}
                     onClick={launchInstance}
@@ -213,7 +207,6 @@ export function InstanceActionBar({
                     label={t('dialog.instance.action.open_in_game')}
                     icon={Gamepad2Icon}
                     disableTooltip={disableTooltip}
-                    variant={actionVariant}
                     loading={busy === 'open-in-game'}
                     disabled={Boolean(busy)}
                     onClick={() => {
@@ -226,7 +219,6 @@ export function InstanceActionBar({
                     label={t('dialog.instance.label.self_invite')}
                     icon={MailIcon}
                     disableTooltip={disableTooltip}
-                    variant={actionVariant}
                     loading={busy === 'invite'}
                     disabled={Boolean(busy)}
                     onClick={() => {
@@ -239,7 +231,6 @@ export function InstanceActionBar({
                     label={t('component.instance_action_bar.rename.header')}
                     icon={PencilIcon}
                     disableTooltip={disableTooltip}
-                    variant={actionVariant}
                     loading={busy === 'rename'}
                     disabled={Boolean(busy)}
                     onClick={() => {
@@ -254,7 +245,6 @@ export function InstanceActionBar({
                     )}
                     icon={CalendarPlusIcon}
                     disableTooltip={disableTooltip}
-                    variant={actionVariant}
                     loading={busy === 'calendar-link'}
                     disabled={Boolean(busy)}
                     onClick={() => setCalendarLinkOpen(true)}
@@ -265,7 +255,6 @@ export function InstanceActionBar({
                     label={refreshTooltip}
                     icon={RefreshCwIcon}
                     disableTooltip={disableTooltip}
-                    variant={actionVariant}
                     loading={busy === 'refresh'}
                     disabled={Boolean(busy)}
                     onClick={() => {
@@ -278,7 +267,6 @@ export function InstanceActionBar({
                     label={historyTooltip}
                     icon={HistoryIcon}
                     disableTooltip={disableTooltip}
-                    variant={actionVariant}
                     disabled={Boolean(busy)}
                     onClick={onHistory}
                 />

@@ -1,11 +1,14 @@
 import {
     ChevronRightIcon,
+    CrownIcon,
     ExternalLinkIcon,
     PencilIcon,
-    SparklesIcon
+    SparklesIcon,
+    UsersRoundIcon
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { shallow } from 'zustand/shallow';
 
 import { formatCredits } from '@/components/economy/economyDisplay';
 import { useEconomyBalance } from '@/components/economy/useEconomyBalance';
@@ -40,6 +43,7 @@ import { parseLocation } from '@/shared/utils/location';
 import { replaceBioSymbols } from '@/shared/utils/string';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
+import { HintTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import {
     Card,
@@ -540,6 +544,12 @@ function UserDialogProfileLinksPanel({
             }
           : null;
 
+    const representedGroupIconFallback = (
+        <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-md">
+            <UsersRoundIcon aria-hidden="true" className="size-5" />
+        </span>
+    );
+
     return (
         <InfoPanel title={t('dialog.user.info.profile_details')}>
             {avatarInfo ? (
@@ -584,14 +594,28 @@ function UserDialogProfileLinksPanel({
                                 )}
                                 alt=""
                                 className="size-10 shrink-0 rounded-md object-cover"
+                                fallback={representedGroupIconFallback}
                             />
-                        ) : null}
+                        ) : (
+                            representedGroupIconFallback
+                        )}
                         <span className="min-w-0">
-                            <span className="block truncate">
-                                {representedGroup.ownerId === profile.id
-                                    ? 'Owner - '
-                                    : ''}
-                                {representedGroup.name || 'Group'}
+                            <span className="flex min-w-0 items-center gap-1.5">
+                                {representedGroup.ownerId === profile.id && (
+                                    <HintTooltip
+                                        label={t('dialog.group.label.owner_2')}
+                                    >
+                                        <span
+                                            role="img"
+                                            className="inline-flex shrink-0"
+                                        >
+                                            <CrownIcon className="text-muted-foreground size-3.5 shrink-0" />
+                                        </span>
+                                    </HintTooltip>
+                                )}
+                                <span className="truncate">
+                                    {representedGroup.name || 'Group'}
+                                </span>
                             </span>
                             <span className="text-muted-foreground block truncate">
                                 {representedGroup.memberCount
@@ -934,6 +958,17 @@ export function UserDialogActivitySummaryPanel({
     );
 }
 
+const MemoPresenceSection = memo(
+    UserDialogPresenceSection,
+    (prev, next) =>
+        shallow(prev.presence, next.presence) &&
+        shallow(prev.actions, next.actions)
+);
+const MemoNotesPanel = memo(UserDialogNotesPanel);
+const MemoBioPanel = memo(UserDialogBioPanel);
+const MemoProfileLinksPanel = memo(UserDialogProfileLinksPanel);
+const MemoActivitySummaryPanel = memo(UserDialogActivitySummaryPanel);
+
 export function UserDialogInfoTab({
     presenceSection,
     notesSection,
@@ -947,25 +982,25 @@ export function UserDialogInfoTab({
         <EntityDialogTabContent value="info" className="pt-3">
             <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
                 <div className="flex min-w-0 flex-col gap-4">
-                    <UserDialogPresenceSection
+                    <MemoPresenceSection
                         presence={presenceSection.presence}
                         actions={presenceSection.actions}
                     />
-                    <UserDialogNotesPanel
+                    <MemoNotesPanel
                         profile={notesSection.profile}
                         hideUserNotes={notesSection.hideUserNotes}
                         memo={notesSection.memo}
                         hideUserMemos={notesSection.hideUserMemos}
                         onEditMemo={notesSection.onEditMemo}
                     />
-                    <UserDialogBioPanel
+                    <MemoBioPanel
                         profile={profile}
                         bioLinks={bioLinks}
                         onEditBio={onEditBio}
                     />
                 </div>
                 <div className="flex min-w-0 flex-col gap-4">
-                    <UserDialogProfileLinksPanel
+                    <MemoProfileLinksPanel
                         currentAvatarDisplayName={
                             profileLinksSection.currentAvatarDisplayName
                         }
@@ -980,7 +1015,7 @@ export function UserDialogInfoTab({
                             profileLinksSection.visibleHomeLocationTarget
                         }
                     />
-                    <UserDialogActivitySummaryPanel
+                    <MemoActivitySummaryPanel
                         friendedAt={activitySummarySection.friendedAt}
                         relationshipHistory={
                             activitySummarySection.relationshipHistory

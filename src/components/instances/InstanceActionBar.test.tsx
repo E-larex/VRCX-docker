@@ -107,50 +107,31 @@ vi.mock('react-i18next', async (importOriginal) => {
     return {
         ...(await importOriginal<typeof import('react-i18next')>()),
         useTranslation: () => ({
-            t: (key: string) => translations[key] || key
+            t: (key: string) => translations[key] || key,
+            i18n: { language: 'en' }
         })
     };
 });
 
-vi.mock('@/ui/shadcn/tooltip', async () => {
+vi.mock('@/ui/hint-tooltip', async () => {
     const ReactRuntime = await import('react');
-    type MockRender =
-        | React.ReactNode
-        | ((props: object, state: object) => React.ReactNode);
-    const renderMockSlot = (
-        render: MockRender | undefined,
-        children: React.ReactNode
-    ) => {
-        if (typeof render === 'function') {
-            return render({}, {});
-        }
-        return ReactRuntime.isValidElement(render) ? render : children;
-    };
-
     return {
-        Tooltip: ({ children }: React.PropsWithChildren) =>
+        IntentTooltip: ({
+            children,
+            content
+        }: {
+            children: React.ReactElement;
+            content: React.ReactNode;
+        }) =>
             ReactRuntime.createElement(
                 'span',
                 { 'data-tooltip-root': true },
-                children
-            ),
-        TooltipTrigger: ({
-            children,
-            render
-        }: {
-            children?: React.ReactNode;
-            render?: MockRender;
-        }) =>
-            ReactRuntime.createElement(
-                ReactRuntime.Fragment,
-                null,
-                renderMockSlot(render, children)
-            ),
-        TooltipContent: ({ children }: React.PropsWithChildren) =>
-            ReactRuntime.createElement(
-                'span',
-                { 'data-tooltip-content': true },
-                children
+                children,
+                ReactRuntime.createElement(
+                    'span',
+                    { 'data-tooltip-content': true },
+                    content
+                )
             )
     };
 });

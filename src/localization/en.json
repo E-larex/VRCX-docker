@@ -179,6 +179,35 @@
             "picked": "Picked {name}",
             "skipped": "No one picked for “{query}”"
         },
+        "approval": {
+            "title": "Allow “{action}”?",
+            "description": "The assistant wants to make this change. Nothing happens unless you approve.",
+            "approve": "Approve",
+            "deny": "Deny",
+            "declined": "Declined: {action}",
+            "backup_hint": "Moving removes the favorite from its current group before adding it to the new one. We strongly recommend backing up your favorite ID list first.",
+            "backup_open": "Back up first",
+            "approve_all": "Approve all",
+            "favorite_move": {
+                "summary": "Favorites moving to “{target}”: {count}",
+                "source": "from {group}",
+                "already_in_target": "Already in this group",
+                "not_favorited": "Not in your VRChat favorites; skipped"
+            },
+            "fields": {
+                "userId": "User",
+                "note": "Note",
+                "kind": "Type",
+                "entityId": "Item",
+                "group": "Group",
+                "action": "Action",
+                "tags": "Favorites group",
+                "targetGroup": "Move to",
+                "text": "Text",
+                "afk": "AFK",
+                "config": "Settings"
+            }
+        },
         "scroll_to_latest": "Scroll to bottom",
         "connection": {
             "checking": "Checking connection",
@@ -199,7 +228,6 @@
             "model_unset": "No model available",
             "search_models": "Search models",
             "playbook_mode": "Analysis mode",
-            "allow_writes": "Allow write actions",
             "manage_endpoints": "Manage LLM Endpoints",
             "reasoning_effort": "Reasoning effort",
             "reasoning_effort_provider_default": "Provider default",
@@ -211,6 +239,7 @@
         },
         "tools": {
             "favorite_local": "Update local favorites",
+            "favorite_move": "Move a VRChat favorite",
             "favorite_vrchat": "Add a VRChat favorite",
             "find_user": "Find a user",
             "get_activity_streaks": "Check activity streaks",
@@ -743,7 +772,8 @@
             "action_failed": "Couldn't complete that action",
             "failed_to_load_data": "Couldn't load the data",
             "failed_open_instance_in_vrchat_falling_back_to_self_invite": "Couldn't open the instance in VRChat. Sending you a self-invite instead.",
-            "failed_to_save_memo": "Failed to save local note"
+            "failed_to_save_memo": "Failed to save local note",
+            "page_crashed": "Oops, something went wrong."
         },
         "picker": {
             "more_not_shown": "{count} more not shown. Narrow your search to find them."
@@ -755,6 +785,19 @@
         "filter": {
             "label": "Filter",
             "label_count": "Filter ({count})"
+        },
+        "spoken_language": {
+            "ase": "American Sign Language",
+            "asf": "Auslan (Australian Sign Language)",
+            "bfi": "British Sign Language",
+            "cmn": "Mandarin",
+            "dse": "Dutch Sign Language",
+            "fsl": "French Sign Language",
+            "gsg": "German Sign Language",
+            "jsl": "Japanese Sign Language",
+            "kvk": "Korean Sign Language",
+            "nzs": "New Zealand Sign Language",
+            "tws": "Teochew"
         }
     },
     "economy": {
@@ -1086,6 +1129,7 @@
         "about": "About VRCX-0",
         "messages": {
             "zoom_failed": "Failed to apply zoom",
+            "zoom_level": "Zoom: {value}",
             "logout_failed": "Failed to sign out of VRCX-0",
             "restart_failed": "Failed to restart VRCX-0",
             "open_devtools_failed": "Failed to open DevTools"
@@ -1331,7 +1375,7 @@
             "view_more": "View More",
             "mark_all_read": "Mark all read",
             "marking_all_read": "Marking as read…",
-            "mark_read_failed": "Couldn't mark as read",
+            "mark_read_failed": "Couldn't sync to VRChat",
             "mark_as_read": "Mark as read",
             "more_actions": "More actions",
             "join_now": "Join now",
@@ -1810,6 +1854,12 @@
                 "discover": "Discover",
                 "shuffle": "Shuffle",
                 "rooms": "{count} instances",
+                "friends_here_one": "{count} friend here",
+                "friends_here_other": "{count} friends here",
+                "friends_visited_one": "{count} friend visited in 7 days",
+                "friends_visited_other": "{count} friends visited in 7 days",
+                "friends_visited_short_one": "7 days · {count} friend",
+                "friends_visited_short_other": "7 days · {count} friends",
                 "empty": "No worlds to show"
             },
             "label": {
@@ -2062,9 +2112,9 @@
                 "accept": "Accept",
                 "invite": "Invite",
                 "decline": "Decline",
+                "ignore": "Ignore",
                 "delete_log": "Delete notification",
-                "decline_with_message": "Decline with message",
-                "ignore_locally": "Ignore locally"
+                "decline_with_message": "Decline with message"
             },
             "filters": {
                 "requestInvite": "Request Invite",
@@ -2144,14 +2194,18 @@
                 "search_emoji": "Search emoji",
                 "send": "Send"
             },
+            "action_scope": {
+                "vrchat": "Runs on VRChat",
+                "local": "Only changes VRCX-0's local data"
+            },
             "success": {
                 "friend_request_accepted": "Friend request accepted",
                 "notification_declined": "Declined",
+                "friend_request_ignored": "Friend request ignored",
                 "invite_response_sent": "Reply sent",
                 "boop_sent": "Boop sent",
                 "notification_response_sent": "Response sent",
-                "notification_log_entry_deleted": "Notification removed from history",
-                "notification_ignored_locally": "Ignored locally"
+                "notification_log_entry_deleted": "Notification removed from history"
             },
             "error": {
                 "cannot_invite_no_current_vrchat_location_is_available": "Cannot invite: you're not in an instance right now",
@@ -2832,8 +2886,17 @@
                 "base_url": "Base URL",
                 "base_url_invalid": "Enter a full http:// or https:// address.",
                 "models": "Models",
-                "models_placeholder": "Search detected models, or type one and press Enter",
-                "models_empty": "Nothing detected yet. Type a model name and press Enter to add it.",
+                "models_description": "Detect available models, then select the ones to use in Social AI and translation.",
+                "models_search": "Search models",
+                "models_selected": "{count} models selected",
+                "models_select_visible": "Select shown",
+                "models_clear": "Clear selection",
+                "models_remove": "Remove {model}",
+                "models_no_matches": "No models match your search.",
+                "models_manual": "Add model IDs manually",
+                "models_manual_hint": "Separate IDs with commas. Press Enter or click Add. You can also save directly.",
+                "models_add": "Add",
+                "models_empty": "Detect models or add model IDs manually.",
                 "unusable": "No models yet, so this endpoint cannot be used.",
                 "key_saved": "Saved",
                 "key_empty": "Empty",
@@ -2844,7 +2907,7 @@
                 "clear_key": "Clear key",
                 "key_preserve_placeholder": "Leave blank to keep the saved key",
                 "saved": "Endpoint saved",
-                "saved_unusable": "Saved, but no models were found for this endpoint.",
+                "saved_unusable": "Saved without selected models. Select models to use this endpoint.",
                 "save_failed": "Failed to save endpoint",
                 "load_failed": "Failed to load endpoints",
                 "models_detected": "{count} models detected",
@@ -3027,7 +3090,7 @@
                 "header": "Social AI",
                 "description": "Defaults for new conversations. Each conversation can override them from the Social AI panel.",
                 "default_model": "Default model",
-                "default_model_description": "New conversations start with this model.",
+                "default_model_description": "New conversations start with this model. Content translation uses it too unless it has its own model.",
                 "default_model_unset": "No model available",
                 "setup_hint": "Social AI needs an OpenAI-compatible connection before it can answer anything.",
                 "playbook_mode_description": "How much freedom the model gets when analyzing your data.",
@@ -3316,6 +3379,8 @@
                     "theme_mode_pink": "Pink",
                     "theme_mode_material3": "Material 3",
                     "zoom": "Zoom",
+                    "ctrl_wheel_zoom": "Zoom with Mouse Wheel",
+                    "ctrl_wheel_zoom_description": "Hold Ctrl (⌘ on macOS) and scroll to change the zoom level. Off by default to prevent accidental zooming.",
                     "show_instance_id": "Show Instance ID",
                     "age_gated_instances": "Show Age-Gated Instances",
                     "age_gated_instances_description": "Show age-restricted instances. When off, they appear only as restricted, without their details.",
@@ -3851,7 +3916,6 @@
                 "failed_to_save_proxy_settings": "Failed to save proxy settings",
                 "failed_to_crop_existing_prints": "Failed to crop existing prints",
                 "failed_to_save_translation_settings": "Failed to save translation settings",
-                "failed_to_fetch_translation_models": "Failed to fetch translation models",
                 "failed_to_save_feed_filters": "Failed to save feed filters"
             },
             "modal": {
@@ -4172,21 +4236,24 @@
                 "failed_to_delete_notification": "Failed to delete notification",
                 "failed_to_accept_friend_request": "Failed to accept friend request",
                 "failed_to_decline_notification": "Failed to decline notification",
-                "failed_to_ignore_notification": "Failed to ignore notification",
                 "failed_to_send_invite": "Failed to send invite",
                 "invite_response_photo_sent": "Photo reply sent",
                 "invite_response_sent": "Reply sent",
-                "failed_to_send_notification_response": "Couldn't complete that action"
+                "failed_to_send_notification_response": "Couldn't complete that action",
+                "marked_read_locally_only": "Marked as read here, but couldn't sync to VRChat"
             },
             "modal": {
                 "delete_notification_log_entry": "Remove notification?",
                 "delete_the_local_value_log_entry": "Remove this {value} notification from history?",
                 "accept_friend_request": "Accept friend request",
                 "decline_notification": "Decline notification",
+                "ignore_friend_request": "Ignore friend request",
                 "decline": "Decline",
+                "ignore": "Ignore",
                 "send_invite": "Send invite",
                 "accept_friend_request_consequence": "They will be added to your friends list.",
                 "decline_notification_consequence": "The notification will be removed on VRChat.",
+                "ignore_friend_request_consequence": "It will move to Ignored Friend Requests on VRChat.",
                 "send_invite_consequence": "The invite goes to the instance you are in now."
             },
             "dynamic": {
@@ -4294,7 +4361,10 @@
             "accent": {
                 "header": "Accent color",
                 "custom": "Custom",
-                "hex_label": "Hex color"
+                "hex_label": "Hex color",
+                "override_theme": "Override theme accent",
+                "provided_by_theme": "Provided by the community theme “{{name}}”",
+                "override_hint": "Your accent may clash with the theme's colors"
             },
             "custom_css": {
                 "status_on": "On",
@@ -4372,7 +4442,7 @@
                 "upstream": "Original project",
                 "version": "Upstream version: {version}"
             },
-            "tagline": "The fast, lightweight VRCX built with Tauri and Rust.",
+            "tagline": "Faster. Better. Works with AI.",
             "contributors": "Contributors",
             "contributors_error": "Couldn't load the contributor list.",
             "thanks": "Every translation, test, bug report, and idea comes from the community. Thank you.",
@@ -4648,7 +4718,7 @@
                 "unfriend": "Unfriend",
                 "edit_note_memo": "Edit Note and Local Note",
                 "edit_profile": "Edit Profile",
-                "account_standing": "Account Standing"
+                "vrchat_account": "VRChat Account"
             },
             "group_invite": {
                 "select_group": "Select a group",
@@ -5008,12 +5078,31 @@
                 "apply_color": "Apply Color"
             },
             "account_standing": {
-                "header": "Account Standing",
-                "description": "Your account standing as reported by VRChat.",
                 "status": "Status",
                 "issue_clear_days": "Days until cleared",
                 "sanctions": "Sanctions",
-                "load_failed": "Couldn't load account standing"
+                "load_failed": "Couldn't load account standing",
+                "raw_data": "Raw data"
+            },
+            "vrchat_account": {
+                "header": "VRChat Account",
+                "description": "Settings and standing for the VRChat account you are signed in with.",
+                "tabs": {
+                    "content_filters": "Content Filters",
+                    "account_standing": "Account Standing"
+                },
+                "content_filters": {
+                    "description": "Hide avatars and worlds that creators have tagged with this content. Changes are saved to your VRChat account and apply in game.",
+                    "unavailable": "VRChat doesn't offer content filter settings for this account.",
+                    "update_failed": "Couldn't update content filters",
+                    "items": {
+                        "gore": "Hide excessive gore",
+                        "horror": "Hide extreme horror",
+                        "violence": "Hide intense violence",
+                        "sex": "Hide sexually suggestive content",
+                        "adult": "Hide adult language and themes"
+                    }
+                }
             },
             "relationship": {
                 "friend": "Friend",
@@ -5064,6 +5153,8 @@
                 "new_instance_and_open_ingame": "New Instance and Open In-game",
                 "make_home": "Make Home",
                 "reset_home": "Reset Home",
+                "like": "Like",
+                "dislike": "Dislike",
                 "show_previous_instances": "Show Instance History",
                 "edit_details": "Edit Details",
                 "manage_world": "Manage World",
@@ -5084,14 +5175,20 @@
                 "closed": "Closed",
                 "public_count": "Public {count}",
                 "private_count": "Private {count}",
-                "capacity_count": "Capacity {count} (max {max})",
                 "pin_to_sidebar": "Pin to Sidebar",
                 "pinned_to_sidebar": "Pinned to the sidebar",
                 "pin_to_sidebar_failed": "Couldn't pin to the sidebar",
                 "unpin_from_sidebar": "Unpin from Sidebar",
                 "unpinned_from_sidebar": "Unpinned from the sidebar",
                 "unpin_from_sidebar_failed": "Couldn't unpin from the sidebar",
-                "instance_creator": "Instance Creator"
+                "instance_creator": "Instance Creator",
+                "languages_declared": "Set by host: {languages}",
+                "languages_current": "In instance now: {languages}",
+                "filter_with_friends": "With friends",
+                "filter_hide_unavailable": "Hide closed or full",
+                "filter_category_all": "All",
+                "filter_clear": "Clear filters",
+                "filter_no_match": "No instances match the filters"
             },
             "info": {
                 "header": "Info",
@@ -5230,6 +5327,7 @@
                 "failed_to_launch_vrchat_instance": "Failed to launch VRChat instance",
                 "home_world_reset": "Home world reset",
                 "failed_to_update_home_world": "Failed to update home world",
+                "failed_to_update_rating": "Couldn't update your rating",
                 "memo_saved": "Local note saved",
                 "memo_cleared": "Local note cleared",
                 "failed_to_save_memo": "Failed to save local note",
@@ -5775,7 +5873,62 @@
             "normal": "Normal",
             "group": "Group",
             "legacy": "Legacy",
-            "display_name": "Instance Name"
+            "display_name": "Instance Name",
+            "description": "Description",
+            "category": "Category",
+            "vibes": "Vibes",
+            "vibes_placeholder": "Select vibes",
+            "vibes_hint": "Pick up to 3. The first one is shown as the main vibe.",
+            "reset_defaults": "Reset to Defaults",
+            "category_options": {
+                "hangout": "Hangout",
+                "music_shows": "Music & Shows",
+                "games": "Games",
+                "roleplay": "Roleplay",
+                "avatars": "Avatars",
+                "explore": "Explore",
+                "watch_party": "Watch Party",
+                "other": "Other"
+            },
+            "vibe_options": {
+                "adventure": "Adventure",
+                "anime": "Anime",
+                "arts": "Arts",
+                "casual": "Casual",
+                "chill": "Chill",
+                "club": "Club",
+                "combat": "Combat",
+                "comedy": "Comedy",
+                "competitive": "Competitive",
+                "cozy": "Cozy",
+                "creative": "Creative",
+                "cuddle": "Cuddle",
+                "dance": "Dance",
+                "drinking": "Drinking",
+                "education": "Education",
+                "explore": "Explore",
+                "fantasy": "Fantasy",
+                "flight": "Flight",
+                "fun": "Fun",
+                "furry": "Furry",
+                "horror": "Horror",
+                "karaoke": "Karaoke",
+                "liminal": "Liminal",
+                "meme": "Meme",
+                "military": "Military",
+                "newcomer_friendly": "Newcomer Friendly",
+                "open_mic": "Open Mic",
+                "racing": "Racing",
+                "rave": "Rave",
+                "relaxing": "Relaxing",
+                "shader": "Shader",
+                "showcase": "Showcase",
+                "sleep": "Sleep",
+                "social": "Social",
+                "visualizer": "Visualizer",
+                "wellness": "Wellness",
+                "world_hop": "World Hop"
+            }
         },
         "launch": {
             "header": "Launch",
@@ -6139,6 +6292,9 @@
             "worlds_description": "Screenshots grouped by world",
             "people": "People",
             "people_description": "Screenshots grouped by who was there",
+            "people_section_friends": "Friends",
+            "people_section_former_friends": "Former friends",
+            "people_section_others": "Others",
             "world_album_count": "{count} worlds",
             "people_album_count": "{count} people",
             "empty_albums": "Nothing to group yet",
@@ -6199,19 +6355,23 @@
             "mode": "Provider",
             "mode_google": "Google Translate",
             "mode_deepl": "DeepL Free API",
+            "mode_llm": "LLM endpoint",
             "test": "Test",
             "save": "Save",
-            "msg_fill_endpoint_model": "Select an endpoint and enter a model name",
             "msg_settings_saved": "Translation settings saved",
+            "msg_no_default_model": "No default model is set. Choose one in Settings → AI, or pick a model here.",
             "msg_test_success": "Test succeeded",
             "msg_test_failed": "Test failed",
             "openai": {
-                "model": "Model Name",
+                "model": "Model",
+                "model_description": "Uses the default model from AI settings unless you pick a different one.",
+                "model_follow_default": "Default model ({model})",
+                "model_follow_default_unset": "Default model (not set)",
+                "model_follow_default_pending": "Default model",
+                "model_endpoint_removed": "The LLM endpoint for this model was deleted, so translation will fail. Pick another model.",
+                "model_not_selected": "{model} isn't selected on {endpoint}.",
                 "prompt_optional": "Prompt (Optional)",
                 "prompt_optional_description": "Optional system prompt. Must include the {targetLang} variable.",
-                "connection": "LLM Endpoint",
-                "connection_description": "Only OpenAI-compatible endpoints are supported.",
-                "connection_placeholder": "Select an endpoint",
                 "reasoning_effort": "Reasoning effort",
                 "reasoning_effort_provider_default": "Provider default"
             },
@@ -7138,26 +7298,47 @@
         }
     },
     "notifications": {
-        "has_joined": "has joined",
-        "has_left": "has left",
-        "joined_with_others": "and {count} more joined",
-        "left_with_others": "and {count} more left",
-        "is_joining": "is joining",
-        "gps": "is in {location}",
-        "online_location": "has logged in to {location}",
-        "online": "has logged in",
-        "offline": "has logged out",
-        "status_update": "status is now {status} {description}",
-        "invite": "has invited you to {location} {message}",
-        "request_invite": "has requested an invite {message}",
-        "invite_response": "has responded to your invite {message}",
-        "request_invite_response": "has responded to your invite request {message}",
-        "friend_request": "has sent you a friend request",
-        "friend": "is now your friend",
-        "unfriend": "is no longer your friend",
-        "trust_level": "Trust level is now {trustLevel}",
-        "display_name": "changed their name to {displayName}",
-        "bio": "updated bio",
+        "has_joined": "Joined",
+        "has_left": "Left",
+        "joined_with_others": "Joined with {count} others",
+        "left_with_others": "Left with {count} others",
+        "is_joining": "Joining",
+        "gps": "In {location}",
+        "online_location": "Online in {location}",
+        "online": "Online",
+        "offline": "Offline",
+        "status_update": "Status: {status} {description}",
+        "invite": "Invite to {location} {message}",
+        "request_invite": "Invite request {message}",
+        "invite_response": "Invite reply {message}",
+        "request_invite_response": "Invite request reply {message}",
+        "friend_request": "Friend request",
+        "friend": "Now friends",
+        "unfriend": "No longer friends",
+        "trust_level": "Trust rank: {trustLevel}",
+        "display_name": "Renamed to {displayName}",
+        "bio": "Updated bio",
+        "sentence": {
+            "has_joined": "{name} joined",
+            "has_left": "{name} left",
+            "is_joining": "{name} is joining",
+            "gps": "{name} is now in {location}",
+            "online_location": "{name} came online in {location}",
+            "online": "{name} came online",
+            "offline": "{name} went offline",
+            "status_update": "{name} changed status to {status} {description}",
+            "invite": "{name} invited you to {location} {message}",
+            "request_invite": "{name} asked for an invite {message}",
+            "invite_response": "{name} replied to your invite {message}",
+            "request_invite_response": "{name} replied to your invite request {message}",
+            "friend_request": "{name} sent you a friend request",
+            "friend": "You and {name} are now friends",
+            "unfriend": "{name} is no longer your friend",
+            "trust_level": "{name}'s trust rank is now {trustLevel}",
+            "display_name": "{name} changed their name to {displayName}",
+            "bio": "{name} updated their bio",
+            "avatar_change": "{name} switched to {avatar}"
+        },
         "group_announcement_title": "Group Announcement",
         "group_event_created_title": "Group Event Created",
         "group_event_starting_title": "Group Event Starting",
@@ -7182,7 +7363,7 @@
         "tracker_disconnected": "disconnected",
         "tracker_disconnected_battery": "disconnected · last battery {percent}%",
         "trackers_disconnected": "{count} disconnected",
-        "avatar_change": "changed avatar to {avatar}",
+        "avatar_change": "Avatar: {avatar}",
         "blocked_player_joined": "Blocked user has joined",
         "blocked_player_left": "Blocked user has left",
         "muted_player_joined": "Muted user has joined",
@@ -7585,7 +7766,7 @@
         "vrc_notification_center": {
             "toast": {
                 "failed_to_mark_notifications_as_seen": "Failed to mark notifications as seen",
-                "mark_all_seen_partially_failed": "Some notifications couldn't be marked as read",
+                "mark_all_seen_partially_failed": "All marked as read here, but some couldn't sync to VRChat",
                 "failed_to_accept_friend_request": "Failed to accept friend request",
                 "failed_to_decline_notification": "Failed to decline notification",
                 "failed_to_send_invite": "Failed to send invite",

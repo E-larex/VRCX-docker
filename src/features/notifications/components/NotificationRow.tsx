@@ -1,7 +1,8 @@
 import { CheckCheckIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DeferredDropdownMenu } from '@/components/DeferredDropdownMenu';
 import { Location } from '@/components/Location';
 import { FadeInImage } from '@/components/media/FadeInImage';
 import {
@@ -14,18 +15,15 @@ import { cn } from '@/lib/utils';
 import type { NotificationRow as NotificationRecord } from '@/repositories/notificationPersistenceRepository';
 import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
 import { getDismissResponse } from '@/shared/utils/notificationResponse';
-import { HintTooltip } from '@/ui/hint-tooltip';
+import { IntentTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import {
-    DropdownMenu,
     DropdownMenuContent,
     DropdownMenuGroup,
     DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
+    DropdownMenuSeparator
 } from '@/ui/shadcn/dropdown-menu';
 import { Spinner } from '@/ui/shadcn/spinner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { useNotificationActionPending } from '../notificationActionPending';
 import { openSender, shouldShowDeleteLog } from '../notificationCenterUtils';
@@ -37,6 +35,10 @@ import {
 import { useNotificationNewThisSession } from '../notificationSessionUnread';
 import { toNotificationViewModel } from '../notificationViewModel';
 import { useNotificationActorImage } from '../useNotificationActorImage';
+import {
+    NotificationActionMenuText,
+    NotificationActionScopeTooltip
+} from './NotificationActionScope';
 import { NotificationMessage } from './NotificationMessage';
 import {
     NOTIFICATION_ROW_HOVER_REVEAL,
@@ -55,7 +57,7 @@ export type NotificationFeedHandlers = NotificationRowActionHandlers & {
     onOpenLink(link: unknown): void;
 };
 
-export function NotificationRow({
+export const NotificationRow = memo(function NotificationRow({
     notification,
     currentUserId,
     canInviteFromCurrentLocation,
@@ -117,6 +119,7 @@ export function NotificationRow({
     const showMenuMarkRead =
         view.unseen &&
         notification.type !== 'friendRequest' &&
+        !orderedActions.some((action) => action.key === 'mark-seen') &&
         !getDismissResponse(notification.responses);
     const showDelete = Boolean(shouldShowDeleteLog(notification));
     const hasMenu =
@@ -284,16 +287,11 @@ export function NotificationRow({
                 </NotificationText>
                 <div className="mt-0.5 flex items-center gap-2">
                     <div className="flex min-w-0 flex-1 items-center gap-x-3">
-                        <Tooltip>
-                            <TooltipTrigger
-                                render={
-                                    <span className="text-muted-foreground/60 shrink-0 text-xs tabular-nums">
-                                        {clockLabel}
-                                    </span>
-                                }
-                            />
-                            <TooltipContent>{absoluteLabel}</TooltipContent>
-                        </Tooltip>
+                        <IntentTooltip content={absoluteLabel}>
+                            <span className="text-muted-foreground/60 shrink-0 text-xs tabular-nums">
+                                {clockLabel}
+                            </span>
+                        </IntentTooltip>
                         {expiresLabel ? (
                             <span className="text-muted-foreground shrink-0 text-[11px] leading-4 tabular-nums">
                                 {expiresLabel}
@@ -319,17 +317,21 @@ export function NotificationRow({
                                 <Spinner className="text-muted-foreground size-3.5" />
                             ) : null}
                             {inlineActions.map((action) => (
-                                <Button
+                                <NotificationActionScopeTooltip
                                     key={action.key}
-                                    type="button"
-                                    size="xs"
-                                    variant="ghost"
-                                    disabled={actionPending}
-                                    aria-label={`${action.label} · ${actorName || typeLabel}`}
-                                    onClick={action.onClick}
+                                    scope={action.scope}
                                 >
-                                    {action.label}
-                                </Button>
+                                    <Button
+                                        type="button"
+                                        size="xs"
+                                        variant="ghost"
+                                        disabled={actionPending}
+                                        aria-label={`${action.label} · ${actorName || typeLabel}`}
+                                        onClick={action.onClick}
+                                    >
+                                        {action.label}
+                                    </Button>
+                                </NotificationActionScopeTooltip>
                             ))}
                         </div>
                     ) : null}
@@ -343,20 +345,18 @@ export function NotificationRow({
                     )}
                 >
                     {hasMenu ? (
-                        <DropdownMenu>
-                            <HintTooltip label={moreActionsLabel}>
-                                <DropdownMenuTrigger
-                                    render={
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon-xs"
-                                        >
-                                            <MoreHorizontalIcon data-icon="icon" />
-                                        </Button>
-                                    }
-                                />
-                            </HintTooltip>
+                        <DeferredDropdownMenu
+                            label={moreActionsLabel}
+                            trigger={
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-xs"
+                                >
+                                    <MoreHorizontalIcon data-icon="icon" />
+                                </Button>
+                            }
+                        >
                             <DropdownMenuContent align="end">
                                 <DropdownMenuGroup>
                                     {showMenuMarkRead ? (
@@ -368,9 +368,12 @@ export function NotificationRow({
                                             }
                                         >
                                             <CheckCheckIcon data-icon="inline-start" />
-                                            {t(
-                                                'view.notification.action.mark_seen'
-                                            )}
+                                            <NotificationActionMenuText
+                                                label={t(
+                                                    'view.notification.action.mark_seen'
+                                                )}
+                                                scope="vrchat"
+                                            />
                                         </DropdownMenuItem>
                                     ) : null}
                                     {overflowActions.map((action) => (
@@ -379,7 +382,10 @@ export function NotificationRow({
                                             onClick={action.onClick}
                                         >
                                             <action.Icon data-icon="inline-start" />
-                                            {action.label}
+                                            <NotificationActionMenuText
+                                                label={action.label}
+                                                scope={action.scope}
+                                            />
                                         </DropdownMenuItem>
                                     ))}
                                 </DropdownMenuGroup>
@@ -403,15 +409,18 @@ export function NotificationRow({
                                                 }
                                             >
                                                 <Trash2Icon data-icon="inline-start" />
-                                                {t(
-                                                    'view.notification.actions.delete_log'
-                                                )}
+                                                <NotificationActionMenuText
+                                                    label={t(
+                                                        'view.notification.actions.delete_log'
+                                                    )}
+                                                    scope="local"
+                                                />
                                             </DropdownMenuItem>
                                         </DropdownMenuGroup>
                                     </>
                                 ) : null}
                             </DropdownMenuContent>
-                        </DropdownMenu>
+                        </DeferredDropdownMenu>
                     ) : null}
                 </span>
                 {view.media && !mediaFailed ? (
@@ -436,4 +445,4 @@ export function NotificationRow({
             </div>
         </div>
     );
-}
+});

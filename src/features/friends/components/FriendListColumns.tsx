@@ -32,8 +32,6 @@ import { Checkbox } from '@/ui/shadcn/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import {
-    languageCodeLabel,
-    languageTooltipLabel,
     resolveFriendLanguageRows,
     resolveFriendStatusMeta as resolveStatusMeta
 } from '../friendListDisplay';
@@ -168,15 +166,11 @@ export function useFriendListColumns({
                         className="ml-auto"
                     />
                 ),
-                cell: ({ row }) => {
-                    const friendNumber =
-                        parseListNumber(
-                            row.original?.$friendNumber ??
-                                row.original?.friendNumber ??
-                                row.getValue('friendNumber')
-                        ) || row.index + 1;
-                    return <span>{friendNumber}</span>;
-                }
+                cell: ({ row }) => (
+                    <span>
+                        {parseListNumber(row.getValue('friendNumber')) || ''}
+                    </span>
+                )
             },
             {
                 id: 'avatar',
@@ -330,24 +324,13 @@ export function useFriendListColumns({
                     const languages = resolveFriendLanguageRows(row.original);
                     return languages.length ? (
                         <div className="flex flex-wrap items-center gap-1">
-                            {languages.map((entry) => {
-                                const key = entry?.key || entry?.value || '';
-                                const code = languageCodeLabel(key);
-                                const tooltipLabel = languageTooltipLabel(
-                                    entry,
-                                    code
-                                );
-                                if (!code) {
-                                    return null;
-                                }
-                                return (
-                                    <LanguageCodeBadge
-                                        key={`${key}:${entry?.value || ''}`}
-                                        code={code}
-                                        tooltip={tooltipLabel}
-                                    />
-                                );
-                            })}
+                            {languages.map((entry) => (
+                                <LanguageCodeBadge
+                                    key={entry.key}
+                                    languageKey={entry.key}
+                                    nativeName={entry.value}
+                                />
+                            ))}
                         </div>
                     ) : null;
                 }

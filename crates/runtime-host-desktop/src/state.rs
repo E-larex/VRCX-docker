@@ -302,7 +302,11 @@ impl DesktopRuntimeHostState {
             assembly::build_runtime_composition(&builder, &wiring, Arc::clone(&extension));
         let runtime = builder.finish(composition)?;
         assembly::bind_realtime_runtime(&runtime, &wiring);
-        let remote = assembly::remote::build_remote_runtimes(&runtime, &desktop.host_file_access);
+        let remote = assembly::remote::build_remote_runtimes(
+            &runtime,
+            &desktop.host_file_access,
+            &desktop.telemetry,
+        );
         let local = assembly::local::build_local_runtimes(
             &runtime,
             &game,
@@ -1051,14 +1055,6 @@ impl DesktopRuntimeHostState {
             input,
         )
         .await?)
-    }
-
-    pub fn resolved_openai_translation_endpoint_id(&self) -> Result<String> {
-        Ok(
-            vrcx_0_application::discovery::resolved_openai_translation_endpoint_id(
-                self.runtime.desktop_assembly().config_store().as_ref(),
-            )?,
-        )
     }
 
     pub async fn refresh_social_baseline(

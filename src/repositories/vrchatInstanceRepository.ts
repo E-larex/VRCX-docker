@@ -9,6 +9,7 @@ import {
     type HttpApiExecuteResponse,
     type InstanceCreateGroupAccessType,
     type InstanceCreateMinimumAvatarPerformance,
+    type InstanceCreateOptions,
     type InstanceCreateRegion,
     type InstanceCreateRequest,
     type InstanceCreateType
@@ -45,6 +46,10 @@ interface CreateInstanceOptions extends InstanceRepositoryOptions {
     roleIds?: string[];
     ageGate?: boolean;
     displayName?: string;
+    description?: string;
+    categoryId?: string;
+    vibeIds?: string[];
+    languages?: string[];
 }
 
 interface InstanceIdentityOptions extends InstanceRepositoryOptions {
@@ -126,7 +131,11 @@ async function createInstance({
     queueEnabled = true,
     roleIds = [],
     ageGate = false,
-    displayName = ''
+    displayName = '',
+    description = '',
+    categoryId = '',
+    vibeIds = [],
+    languages = []
 }: CreateInstanceOptions = {}) {
     const normalizedWorldId = worldId?.trim() ?? '';
     const normalizedOwnerId = ownerId?.trim() ?? '';
@@ -176,6 +185,18 @@ async function createInstance({
     if (displayName) {
         params.displayName = displayName;
     }
+    if (description) {
+        params.description = description;
+    }
+    if (categoryId) {
+        params.categoryId = categoryId;
+    }
+    if (vibeIds.length) {
+        params.vibeIds = vibeIds;
+    }
+    if (languages.length) {
+        params.languages = languages;
+    }
 
     return unwrapVrchatInstanceResponse(
         await commands.appVrchatInstanceCreate({
@@ -184,6 +205,14 @@ async function createInstance({
         'instances',
         { ...params }
     );
+}
+
+function getInstanceCreateOptions(): Promise<InstanceCreateOptions> {
+    return fetchCachedData({
+        queryKey: queryKeys.instanceCreateOptions(DEFAULT_VRCHAT_API_ENDPOINT),
+        policy: entityQueryPolicies.instanceCreateOptions,
+        queryFn: () => commands.appVrchatInstanceCreateOptionsGet()
+    });
 }
 
 async function getInstance({
@@ -346,6 +375,7 @@ async function closeInstance({
 
 const vrchatInstanceRepository = Object.freeze({
     createInstance,
+    getInstanceCreateOptions,
     getInstance,
     getInstanceShortName,
     selfInvite,

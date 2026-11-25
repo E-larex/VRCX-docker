@@ -82,6 +82,50 @@ export type AssistantToolResultEvent = {
     entities: Entity[];
     charts: AssistantChart[];
     screenshots?: AssistantScreenshots | null;
+    denied: boolean;
+};
+
+export type AssistantApprovalField = {
+    name: string;
+    value: string;
+};
+
+export type AssistantFavoriteGroup = {
+    name: string;
+    displayName: string;
+};
+
+export type AssistantFavoriteMoveStatus =
+    | 'wouldMove'
+    | 'alreadyInTarget'
+    | 'notFavorited';
+
+export type AssistantFavoriteMoveItem = {
+    entityId: string;
+    name: string | null;
+    source: AssistantFavoriteGroup | null;
+    status: AssistantFavoriteMoveStatus;
+};
+
+export type AssistantFavoriteMovePreview = {
+    kind: 'world' | 'friend' | 'avatar';
+    target: AssistantFavoriteGroup;
+    items: AssistantFavoriteMoveItem[];
+};
+
+export type AssistantApproval = {
+    id: string;
+    toolCallId: string;
+    tool: string;
+    fields: AssistantApprovalField[];
+    favoriteMove: AssistantFavoriteMovePreview | null;
+};
+
+export type AssistantApprovalRequestEvent = {
+    ownerUserId: string;
+    sessionId: string;
+    turnId: string;
+    approval: AssistantApproval;
 };
 
 export type AssistantChoiceCandidate = {
@@ -117,7 +161,17 @@ export type SessionSummary = {
     updatedAt: string;
 };
 
-export type ToolCallStatus = 'pending' | 'done' | 'error';
+export type ToolCallStatus = 'pending' | 'done' | 'error' | 'denied';
+
+export type ApprovalStatus = 'pending' | 'approved' | 'denied';
+
+export interface UIApproval {
+    id: string;
+    sessionId: string;
+    fields: AssistantApprovalField[];
+    favoriteMove: AssistantFavoriteMovePreview | null;
+    status: ApprovalStatus;
+}
 
 export interface UIToolCall {
     id: string;
@@ -128,6 +182,7 @@ export interface UIToolCall {
     entities: Entity[];
     charts: AssistantChart[];
     screenshots?: AssistantScreenshots | null;
+    approval?: UIApproval;
 }
 
 export type UserChoiceStatus = 'pending' | 'picked' | 'skipped';

@@ -8,10 +8,6 @@ import {
     APP_FONT_DEFAULT_KEY
 } from '@/shared/constants/fonts';
 import { normalizeAvatarAutoCleanupPreference } from '@/shared/constants/settings';
-import {
-    DEFAULT_TRANSLATION_ENDPOINT,
-    DEFAULT_TRANSLATION_MODEL
-} from '@/shared/constants/settings';
 import { MINUTES_PER_DAY } from '@/shared/constants/time';
 import { DEFAULT_GENERIC_WEBHOOK_FIELDS } from '@/shared/constants/webhook';
 import { normalizeTrustColors } from '@/shared/utils/trustColors';
@@ -86,6 +82,7 @@ export async function loadPreferenceSnapshot() {
         tableDensity,
         compactTableMode,
         reducedMotionAndBlur,
+        ctrlWheelZoom,
         accessibleStatusIndicators,
         showNewDashboardButton,
         recentActionCooldownEnabled,
@@ -215,7 +212,6 @@ export async function loadPreferenceSnapshot() {
         bioLanguage,
         translationAPIType,
         translationEndpointId,
-        translationAPIEndpoint,
         translationAPIModel,
         translationAPIPrompt,
         translationAPIReasoningEffort,
@@ -245,6 +241,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getRawValue('tableDensity'),
         configRepository.getBool('compactTableMode', false),
         configRepository.getBool('reducedMotionAndBlur', false),
+        configRepository.getBool('ctrlWheelZoom', false),
         configRepository.getBool('VRCX_accessibleStatusIndicators', false),
         configRepository.getBool('showNewDashboardButton', true),
         configRepository.getBool('recentActionCooldownEnabled', false),
@@ -392,14 +389,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getString('bioLanguage', 'en'),
         configRepository.getString('translationAPIType', 'google'),
         configRepository.getString('translationEndpointId', ''),
-        configRepository.getString(
-            'translationAPIEndpoint',
-            DEFAULT_TRANSLATION_ENDPOINT
-        ),
-        configRepository.getString(
-            'translationAPIModel',
-            DEFAULT_TRANSLATION_MODEL
-        ),
+        configRepository.getString('translationAPIModel', ''),
         configRepository.getString('translationAPIPrompt', ''),
         configRepository.getString('translationAPIReasoningEffort', ''),
         configRepository.getString('VRCX_fontFamily', APP_FONT_DEFAULT_KEY),
@@ -470,6 +460,7 @@ export async function loadPreferenceSnapshot() {
         dataTableStriped: Boolean(dataTableStriped),
         tableDensity: resolvedTableDensity,
         reducedMotionAndBlur: Boolean(reducedMotionAndBlur),
+        ctrlWheelZoom: Boolean(ctrlWheelZoom),
         accessibleStatusIndicators: Boolean(accessibleStatusIndicators),
         showNewDashboardButton: Boolean(showNewDashboardButton),
         recentActionCooldownEnabled: Boolean(recentActionCooldownEnabled),
@@ -656,9 +647,7 @@ export async function loadPreferenceSnapshot() {
         bioLanguage: normalizeLanguageCode(bioLanguage),
         translationAPIType: normalizeTranslationApiType(translationAPIType),
         translationEndpointId: String(translationEndpointId || ''),
-        translationAPIEndpoint:
-            translationAPIEndpoint || DEFAULT_TRANSLATION_ENDPOINT,
-        translationAPIModel: translationAPIModel || DEFAULT_TRANSLATION_MODEL,
+        translationAPIModel: translationAPIModel || '',
         translationAPIPrompt: translationAPIPrompt || '',
         translationAPIReasoningEffort: translationAPIReasoningEffort || '',
         appFontFamily: normalizeAppFontFamily(appFontFamily),

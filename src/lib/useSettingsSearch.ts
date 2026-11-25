@@ -36,7 +36,11 @@ export function useSettingsSearch(
                 ({ entry }) =>
                     isSettingsTabAvailable(entry.tab) &&
                     isSettingsCardAvailable(entry.cardId) &&
-                    !(isWebHost && entry.id === 'interface.appearance.zoom')
+                    !(
+                        isWebHost &&
+                        (entry.id === 'interface.appearance.zoom' ||
+                            entry.id === 'interface.appearance.ctrl-wheel-zoom')
+                    )
             ),
         [gameLogIngest, platform, t]
     );

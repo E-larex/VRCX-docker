@@ -18,9 +18,11 @@ use crate::realtime::friends::presence::{
     Phase, Source,
 };
 use crate::realtime::{
-    FriendBaselineResult, FriendWake, RealtimeFriendApplyResult, RealtimeFriendOutput,
-    RealtimeFriendRecordSnapshot, RealtimeFriendRosterSnapshot, RealtimeFriendSnapshot,
+    FriendBaselineResult, FriendProjectionPatch, FriendWake, RealtimeFriendApplyResult,
+    RealtimeFriendOutput, RealtimeFriendRecordSnapshot, RealtimeFriendRosterSnapshot,
+    RealtimeFriendSnapshot,
 };
+use vrcx_0_core::json::JsonExt;
 
 use super::apply::{apply_friend_event, apply_wake};
 use crate::realtime::event_time::EventTime;
@@ -37,6 +39,13 @@ pub(super) struct Roster {
     pub(super) generation: u64,
     pub(super) baseline_revision: u64,
     pub(super) entries: HashMap<String, FriendEntry>,
+}
+
+pub(crate) struct FriendRosterScope {
+    pub(crate) current_user_id: String,
+    pub(crate) endpoint: String,
+    pub(crate) generation: u64,
+    pub(crate) baseline_revision: u64,
 }
 
 pub(crate) enum RosterDelta {
@@ -116,6 +125,17 @@ impl RealtimeFriendsRuntime {
             .roster
             .as_ref()
             .map(|roster| (roster.generation, roster.baseline_revision))
+    }
+
+    pub(crate) fn roster_scope(&self) -> Option<FriendRosterScope> {
+        let state = self.lock_state();
+        let roster = state.roster.as_ref()?;
+        Some(FriendRosterScope {
+            current_user_id: roster.session.user_id.clone(),
+            endpoint: roster.session.endpoint.clone(),
+            generation: roster.generation,
+            baseline_revision: roster.baseline_revision,
+        })
     }
 
     pub(crate) fn friend_rev(&self) -> u64 {
@@ -381,6 +401,37 @@ impl RealtimeFriendsRuntime {
                 .collect(),
             presence_by_id: presence_entries(&state, roster),
         })
+    }
+
+    pub(crate) fn apply_friend_numbers(
+        &self,
+        numbers: &HashMap<String, i64>,
+    ) -> Vec<FriendProjectionPatch> {
+        let mut guard = self.lock_state();
+        let state = &mut *guard;
+        let Some(roster) = state.roster.as_mut() else {
+            return Vec::new();
+        };
+        roster
+            .entries
+            .iter_mut()
+            .filter_map(|(user_id, entry)| {
+                apply_friend_number(user_id, &mut entry.record, numbers).then(|| {
+                    FriendProjectionPatch {
+                        user_id: user_id.clone(),
+                        record: entry.record.clone(),
+                        presence: PresenceEntry {
+                            rev: state
+                                .friend_rev_by_user
+                                .get(user_id)
+                                .copied()
+                                .unwrap_or_default(),
+                            view: presence_view(&entry.presence),
+                        },
+                    }
+                })
+            })
+            .collect()
     }
 
     pub fn is_current_friend(&self, user_id: &str) -> bool {
@@ -660,6 +711,26 @@ fn stamp_output_revs(state: &mut RealtimeFriendState, output: &mut RealtimeFrien
     for patch in &mut output.projection.patches {
         patch.presence.rev = rev;
     }
+}
+
+pub(crate) fn apply_friend_number(
+    user_id: &str,
+    record: &mut FriendRecord,
+    numbers: &HashMap<String, i64>,
+) -> bool {
+    let number = numbers.get(user_id).copied().unwrap_or(0);
+    if record
+        .extra
+        .i64_field(derived_keys::FRIEND_NUMBER)
+        .unwrap_or(0)
+        == number
+    {
+        return false;
+    }
+    record
+        .extra
+        .insert(derived_keys::FRIEND_NUMBER.into(), Value::from(number));
+    true
 }
 
 fn preserve_fields_over_placeholder(incoming: &mut FriendRecord, existing: &FriendRecord) {
