@@ -302,13 +302,6 @@ export function AppMenuBar({
                                         >
                                             Discord
                                         </MenuItem>
-                                        <MenuItem
-                                            onClick={() =>
-                                                openLink(links.qqGroup)
-                                            }
-                                        >
-                                            {t('nav_menu.qq_group')}
-                                        </MenuItem>
                                     </MenubarGroup>
                                     <MenubarSeparator />
                                 </>

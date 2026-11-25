@@ -1,9 +1,10 @@
 import { TriangleAlertIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { IndeterminateProgress } from '@/components/IndeterminateProgress';
 import { useCriticalTask } from '@/lib/useCriticalTask';
+import { useDelayedFlag } from '@/lib/useDelayedFlag';
 import { isWebHost } from '@/platform/host';
 import type { DatabaseUpgradeStage } from '@/platform/tauri/bindings';
 import {
@@ -64,23 +65,6 @@ function getDatabaseUpgradeTitleKey(phase: string): string {
         default:
             return 'message.database.upgrade_in_progress_title';
     }
-}
-
-function useElapsedReveal(active: boolean, delayMs: number): boolean {
-    const [revealed, setRevealed] = useState(false);
-    useEffect(() => {
-        if (!active) {
-            setRevealed(false);
-            return;
-        }
-        const timer = globalThis.setTimeout(() => {
-            setRevealed(true);
-        }, delayMs);
-        return () => {
-            globalThis.clearTimeout(timer);
-        };
-    }, [active, delayMs]);
-    return revealed;
 }
 
 function DatabaseUpgradeProgressView({
@@ -210,7 +194,7 @@ export function DatabaseUpgradeDialog({ open }: { open: boolean }) {
     const isBlockingFailure =
         isError &&
         (databaseUpgrade.retryable || databaseUpgrade.freshStartAvailable);
-    const showStageDetail = useElapsedReveal(
+    const showStageDetail = useDelayedFlag(
         open && isBusy,
         STAGE_DETAIL_REVEAL_MS
     );

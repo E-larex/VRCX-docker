@@ -6,9 +6,14 @@ mod write;
 pub use query::{
     notification_has_unseen_action_required, notification_list_query, notification_rows_query,
 };
+pub(crate) use schema::APP_NOTIFICATION_COLUMNS;
 pub use types::{
     NotificationListItemOutput, NotificationListQueryInput, NotificationRowsOutput,
     NotificationRowsQueryInput, NotificationV1RowOutput, NotificationV2RowOutput,
+};
+pub(crate) use write::{
+    expire_notification, insert_app_notification, mark_notification_seen, update_notification_v2,
+    upsert_notification_v1, upsert_notification_v2,
 };
 pub use write::{
     notification_add_v1, notification_add_v2, notification_delete, notification_expire,

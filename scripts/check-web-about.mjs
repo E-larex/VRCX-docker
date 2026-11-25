@@ -229,8 +229,7 @@ try {
             t.send_feedback,
             t.report_issue,
             'Discord',
-            'GitHub',
-            messages.nav_menu.qq_group
+            'GitHub'
         ]) {
             assert.equal(
                 await page

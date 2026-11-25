@@ -31,9 +31,11 @@ COPY src-tauri src-tauri
 COPY src/localization src/localization
 RUN cargo build --release --locked -p vrcx-0-web
 COPY scripts/generate-third-party-licenses.ts scripts/generate-third-party-licenses.ts
+COPY scripts/third-party-license-texts scripts/third-party-license-texts
 COPY package-lock.json ./
 COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
 COPY --from=frontend /src/node_modules/@fontsource-variable /src/node_modules/@fontsource-variable
+COPY --from=frontend /src/node_modules/@fontsource /src/node_modules/@fontsource
 COPY --from=frontend /src/dist /src/dist
 RUN node scripts/generate-third-party-licenses.ts --web
 

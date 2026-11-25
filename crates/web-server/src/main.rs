@@ -35,7 +35,24 @@ pub mod async_runtime {
 }
 
 #[derive(Clone)]
-pub struct AppHandle;
+struct AppHandle(Arc<state::AppState>);
+
+trait Manager {
+    fn state<T>(&self) -> State<'_, T>
+    where
+        Self: AsRef<T>,
+    {
+        State(self.as_ref())
+    }
+}
+
+impl Manager for AppHandle {}
+
+impl AsRef<state::AppState> for AppHandle {
+    fn as_ref(&self) -> &state::AppState {
+        &self.0
+    }
+}
 static RESTART: tokio::sync::Notify = tokio::sync::Notify::const_new();
 impl AppHandle {
     pub fn request_restart(&self) {

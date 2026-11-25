@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentType, type ReactElement } from 'react';
 import { Navigate } from 'react-router';
 
+import { isWebHost } from '@/platform/host';
 import { Spinner } from '@/ui/shadcn/spinner';
 
 export function RouteLoadingFallback() {
@@ -309,6 +310,19 @@ export const protectedRoutes: AppRouteDefinition[] = [
         element: lazyRouteElement(
             () => import('@/features/tools/VrchatLogPage'),
             'VrchatLogPage'
+        )
+    },
+    {
+        path: '/tools/chatbox',
+        titleKey: 'app.routes.chatbox',
+        descriptionKey: 'app.routes.chatbox_description',
+        element: isWebHost ? (
+            <Navigate to="/tools" replace />
+        ) : (
+            lazyRouteElement(
+                () => import('@/features/tools/chatbox/ChatboxPage'),
+                'ChatboxPage'
+            )
         )
     },
     {

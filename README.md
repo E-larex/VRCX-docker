@@ -4,7 +4,7 @@ English | [Français](README.fr-FR.md) | [简体中文](README.zh-CN.md) | [繁�
 
 **A Docker web edition based on the original [VRCX-0](https://github.com/Map1en/VRCX-0), with development driven by ChatGPT.**
 
-This fork starts from upstream **v2.33.0** (`2f71c1673bb2ee78015c2b6854c4047cea2ca68c`). It reuses the original Rust business logic, databases, and React interface, keeping changes small to make future upstream updates easier. This is an initial working version.
+This fork starts from upstream **v2.34.0** (`4229d1072eb25077c7712ca41fe6e1b90f513195`). It reuses the original Rust business logic, databases, and React interface, keeping changes small to make future upstream updates easier. This is an initial working version.
 
 Run it on a Linux server without a desktop or display, then access it in a browser. The server keeps collecting friend status and other information from VRChat after the browser closes. It is designed for a single user: one active VRChat account shared across multiple browser sessions, with shared settings and data. The website password is separate from your VRChat password.
 

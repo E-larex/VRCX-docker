@@ -48,7 +48,10 @@ const tauriResourceNoticePath = path.join(
     tauriLicenseResourceDir,
     'THIRD_PARTY_NOTICES.txt'
 );
-const bundledFontPackages = Object.freeze(['@fontsource-variable/geist']);
+const bundledFontPackages = Object.freeze([
+    '@fontsource-variable/geist',
+    '@fontsource/noto-sans'
+]);
 const crateLicenseFilePattern = /^(licen[cs]e|copying|notice|unlicense)/i;
 const defaultLoggerTarget = 'x86_64-unknown-linux-musl';
 const vendoredLicenseDir = path.join(
@@ -206,6 +209,13 @@ function createThirdPartyNoticeText(
     title = 'VRCX-0 Third-Party Notices'
 ): string {
     const lines = [title, '', `Generated: ${new Date().toISOString()}`, ''];
+
+    if (entries.some((entry) => /\bIJG\b/.test(entry.license))) {
+        lines.push(
+            'This software is based in part on the work of the Independent JPEG Group.',
+            ''
+        );
+    }
 
     if (!entries.length) {
         lines.push('No license manifest was available.', '');
@@ -481,7 +491,9 @@ function main(): void {
     }
 
     fs.mkdirSync(outputDir, { recursive: true });
-    fs.mkdirSync(tauriLicenseResourceDir, { recursive: true });
+    if (!webHost) {
+        fs.mkdirSync(tauriLicenseResourceDir, { recursive: true });
+    }
 
     const frontendEntries = readRequiredJsonArray(frontendLicenseJsonPath)
         .map(normalizeFrontendEntry)

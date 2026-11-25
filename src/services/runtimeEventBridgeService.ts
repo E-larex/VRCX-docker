@@ -4,6 +4,7 @@ import type {
     BackendRuntimeCombinedSnapshot
 } from '@/platform/tauri/bindings';
 import vrchatEconomyRepository from '@/repositories/vrchatEconomyRepository';
+import { useChatboxStore } from '@/state/chatboxStore';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -36,6 +37,7 @@ import {
     hydrateFavoriteImportRuntimeStatus
 } from './favoriteImportService';
 import { applyFriendProfileLoadStatusPayload } from './friendProfileLoadService';
+import { applyGameIsolationSnapshot } from './gameIsolationService';
 import { handleGroupBanImportStatusEvent } from './groupBanImportService';
 import { isHostCapabilityAvailable } from './hostCapabilityService';
 import {
@@ -48,6 +50,7 @@ import {
     handleFeedLoggerSyncEvent
 } from './offlineRecordService';
 import { handleRealtimeEntryCorrection } from './realtimePresenceService';
+import { hydrateFriendLocationTimes } from './realtimeRosterUpdateQueue';
 import { runForegroundUpdateRegistryBackupMaintenance } from './registryBackupMaintenanceService';
 import {
     handleFavoritesChangedEvent,
@@ -183,6 +186,21 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
 
     if (event.name === 'notificationDoNotDisturbState') {
         runtimeStore.setNotificationDoNotDisturb(event.payload);
+        return;
+    }
+
+    if (event.name === 'gameIsolationState') {
+        applyGameIsolationSnapshot(event.payload);
+        return;
+    }
+
+    if (event.name === 'chatboxState') {
+        useChatboxStore.getState().setStatus(event.payload);
+        return;
+    }
+
+    if (event.name === 'chatboxConfig') {
+        useChatboxStore.getState().setSavedConfig(event.payload);
         return;
     }
 
@@ -454,6 +472,9 @@ async function hydrateAncillaryRuntimeState(): Promise<void> {
                     snapshot.notificationDoNotDisturbState
                 );
         }),
+        hydrateRuntimeState('Failed to hydrate game isolation state:', () => {
+            applyGameIsolationSnapshot(snapshot.gameIsolationState);
+        }),
         hydrateRuntimeState('Failed to hydrate privacy lock state:', () => {
             useRuntimeStore
                 .getState()
@@ -491,6 +512,9 @@ export async function bindRuntimeEvents(): Promise<() => void> {
         'backgroundImageState',
         'communityThemeState',
         'notificationDoNotDisturbState',
+        'gameIsolationState',
+        'chatboxState',
+        'chatboxConfig',
         'privacyLockState',
         'desktopWidgetState',
         'gameLogProjection',
@@ -613,6 +637,7 @@ export async function bindRuntimeEvents(): Promise<() => void> {
         applyAuthenticatedRuntimePhaseSnapshot(
             combinedSnapshot.authenticatedRuntimePhase
         );
+        hydrateFriendLocationTimes(combinedSnapshot.friendLocationTimes);
     } catch (error) {
         console.warn('Failed to hydrate authenticated runtime phase:', error);
     }

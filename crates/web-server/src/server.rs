@@ -300,6 +300,24 @@ async fn invoke(
     require_mutation(&state, &headers)?;
     let command_args = args.clone();
     let result = match command.as_str() {
+        "app__privacy_lock_device_verify_start" => {
+            let lock = state.app.runtime_host().privacy_lock();
+            Ok(json!(
+                lock.start_device_verification(env!("CARGO_PKG_VERSION"))
+                    .await
+            ))
+        }
+        "app__privacy_lock_device_verify_wait" => {
+            let lock = state.app.runtime_host().privacy_lock();
+            match args["attemptId"].as_str() {
+                Some(id) => lock
+                    .await_device_verification(id)
+                    .await
+                    .map(|outcome| json!(outcome))
+                    .map_err(AppError::from),
+                None => Err(AppError::Custom("Missing attemptId".into())),
+            }
+        }
         command if command.starts_with("app__privacy_lock_") => {
             let app = state.app.clone();
             let command = command.to_owned();
@@ -360,6 +378,10 @@ fn privacy_command(app: &AppState, command: &str, args: &Value) -> Result<Value,
             .ok_or_else(|| AppError::Custom(format!("Missing {key}")))
     };
     let outcome = match command {
+        "app__privacy_lock_device_verify_cancel" => {
+            lock.cancel_device_verification();
+            return Ok(Value::Null);
+        }
         "app__privacy_lock_setup_request_take" => return Ok(json!(lock.take_setup_request())),
         "app__privacy_lock_engage" => lock.engage(),
         "app__privacy_lock_unlock" => lock.unlock(text("password")?),

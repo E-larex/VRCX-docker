@@ -76,6 +76,7 @@ fn selected(path: &[String]) -> bool {
         "application" => !matches!(
             path[1].as_str(),
             "background_mode"
+                | "chatbox"
                 | "deep_link"
                 | "desktop_notification"
                 | "desktop_widget"
@@ -141,7 +142,12 @@ fn module(
             }
         }
         if let Item::Fn(f) = &mut item {
-            if f.sig.ident == "app__save_image_file" {
+            if matches!(
+                f.sig.ident.to_string().as_str(),
+                "app__save_image_file"
+                    | "app__game_isolation_set"
+                    | "app__mcp_server_open_client_install"
+            ) {
                 continue;
             }
             let command = f.attrs.iter().any(|a| a.path().is_ident("web_command"));
@@ -172,7 +178,7 @@ fn module(
                     if last == "State" {
                         arguments.push(quote!(crate::State(&state)));
                     } else if last == "AppHandle" {
-                        arguments.push(quote!(crate::AppHandle));
+                        arguments.push(quote!(crate::AppHandle(state.clone())));
                     } else {
                         let ty = &arg.ty;
                         let wire = ident.to_string().to_lower_camel_case();

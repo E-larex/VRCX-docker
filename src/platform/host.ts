@@ -14,3 +14,7 @@ const desktopSettings = new Set([
 export function isSettingsCardAvailable(cardId: string): boolean {
     return !isWebHost || !desktopSettings.has(cardId);
 }
+
+export function isSettingsTabAvailable(tab: string): boolean {
+    return !isWebHost || (tab !== 'vr' && tab !== 'feedback');
+}

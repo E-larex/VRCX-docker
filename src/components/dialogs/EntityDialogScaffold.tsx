@@ -14,6 +14,7 @@ import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { cn } from '@/lib/utils';
 import { copyTextToClipboard } from '@/services/clipboardService';
 import { toast } from '@/services/toastService';
+import { HintTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import { Card, CardContent, CardHeader } from '@/ui/shadcn/card';
 import {
@@ -143,33 +144,50 @@ function EntityDialogTabs({
     value,
     onValueChange,
     tabs,
+    actions,
     children
 }: {
     value: string;
     onValueChange: (value: string) => void;
     tabs: EntityDialogTab[];
+    actions?: ReactNode;
     children?: ReactNode;
 }) {
+    const tabList = (
+        <TabsList
+            variant="underline"
+            className={cn(
+                'relative flex h-11 min-h-11 w-full justify-start overflow-x-auto overflow-y-hidden rounded-none bg-transparent p-0',
+                actions ? 'min-w-0 flex-1' : 'border-b'
+            )}
+        >
+            {tabs.map((tab) => (
+                <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="text-muted-foreground hover:text-foreground h-11 flex-none rounded-none border-0 bg-transparent px-3 shadow-none after:hidden data-active:bg-transparent data-active:shadow-none"
+                >
+                    {tab.label}
+                </TabsTrigger>
+            ))}
+        </TabsList>
+    );
     return (
         <Tabs
             value={value}
             onValueChange={onValueChange}
             className="flex min-h-0 flex-1 flex-col gap-0"
         >
-            <TabsList
-                variant="underline"
-                className="relative flex h-11 min-h-11 w-full justify-start overflow-x-auto overflow-y-hidden rounded-none border-b bg-transparent p-0"
-            >
-                {tabs.map((tab) => (
-                    <TabsTrigger
-                        key={tab.value}
-                        value={tab.value}
-                        className="text-muted-foreground hover:text-foreground h-11 flex-none rounded-none border-0 bg-transparent px-3 shadow-none after:hidden data-active:bg-transparent data-active:shadow-none"
-                    >
-                        {tab.label}
-                    </TabsTrigger>
-                ))}
-            </TabsList>
+            {actions ? (
+                <div className="flex min-w-0 items-center gap-2 border-b">
+                    {tabList}
+                    <div className="flex shrink-0 items-center gap-1">
+                        {actions}
+                    </div>
+                </div>
+            ) : (
+                tabList
+            )}
             {children}
         </Tabs>
     );
@@ -271,28 +289,30 @@ function EntityActionDropdown({
     dangerous?: boolean;
     indicator?: boolean;
 }) {
+    const { t } = useTranslation();
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger
-                render={
-                    <Button
-                        type="button"
-                        size="icon-lg"
-                        variant={dangerous ? 'destructive' : 'outline'}
-                        aria-label={'Open entity actions'}
-                        className="relative"
-                    >
-                        {busy ? (
-                            <Spinner data-icon="inline-start" />
-                        ) : (
-                            <MoreHorizontalIcon data-icon="inline-start" />
-                        )}
-                        {indicator ? (
-                            <span className="bg-primary absolute top-1.5 right-1.5 size-2 rounded-full" />
-                        ) : null}
-                    </Button>
-                }
-            />
+            <HintTooltip label={t('common.actions.more_actions')}>
+                <DropdownMenuTrigger
+                    render={
+                        <Button
+                            type="button"
+                            size="icon-lg"
+                            variant={dangerous ? 'destructive' : 'outline'}
+                            className="relative"
+                        >
+                            {busy ? (
+                                <Spinner data-icon="inline-start" />
+                            ) : (
+                                <MoreHorizontalIcon data-icon="inline-start" />
+                            )}
+                            {indicator ? (
+                                <span className="bg-primary absolute top-1.5 right-1.5 size-2 rounded-full" />
+                            ) : null}
+                        </Button>
+                    }
+                />
+            </HintTooltip>
             <DropdownMenuContent
                 align="end"
                 className="**:data-[variant=destructive]:text-destructive! **:data-[variant=destructive]:**:text-destructive! min-w-56"
